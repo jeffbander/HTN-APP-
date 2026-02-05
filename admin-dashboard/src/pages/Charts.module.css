@@ -1,0 +1,116 @@
+.loading {
+  padding: 64px;
+  text-align: center;
+  color: #888;
+  font-size: 16px;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.chartCard {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.chartHeader {
+  padding: 20px 24px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chartTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.chartControls {
+  display: flex;
+  gap: 0;
+}
+
+.periodBtn {
+  padding: 4px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  font-size: 12px;
+  cursor: pointer;
+  color: #666;
+}
+
+.periodBtn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.periodBtn:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.periodActive {
+  background: #1976d2;
+  color: white;
+  border-color: #1976d2;
+}
+
+.chartSubtitle {
+  font-size: 13px;
+  color: #888;
+  padding: 4px 24px 0;
+}
+
+.chartBody {
+  padding: 24px;
+}
+
+.pieContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 24px;
+}
+
+.pieLabels {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pieLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.pieDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.pieValue {
+  font-weight: 600;
+  margin-left: auto;
+  min-width: 40px;
+  text-align: right;
+}
+
+.piePct {
+  color: #999;
+  font-size: 12px;
+  min-width: 40px;
+  text-align: right;
+}

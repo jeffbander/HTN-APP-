@@ -1,0 +1,37 @@
+# Flask and extensions
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.5
+Flask-CORS==4.0.0
+
+# PostgreSQL
+psycopg2-binary==2.9.9
+
+# Security & Encryption
+cryptography==41.0.7
+PyJWT==2.8.0
+bcrypt==4.1.2
+pyotp==2.9.0
+python-dotenv==1.0.0
+
+# HIPAA Audit Logging
+structlog==24.1.0
+
+# SSL/TLS
+pyOpenSSL==23.3.0
+
+# Validation
+marshmallow==3.20.1
+email-validator==2.1.0
+
+# Production server
+gunicorn==21.2.0
+
+# Email
+sendgrid==6.11.0
+
+# PDF Generation
+reportlab==4.0.9
+
+# Push Notifications
+firebase-admin==6.4.0

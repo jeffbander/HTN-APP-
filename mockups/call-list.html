@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Call List - HTN Monitor Admin</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: #1a1a2e; color: white; z-index: 100; }
+  .sidebar-header { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 12px; }
+  .sidebar-logo { width: 36px; height: 36px; background: #1976d2; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .sidebar-logo svg { width: 20px; height: 20px; fill: white; }
+  .sidebar-title { font-size: 16px; font-weight: 600; }
+  .sidebar-subtitle { font-size: 11px; color: rgba(255,255,255,0.5); }
+  .nav-section { padding: 16px 0; }
+  .nav-label { padding: 8px 20px; font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 20px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; transition: all 0.2s; cursor: pointer; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+  .nav-item.active { background: rgba(25,118,210,0.2); color: #64b5f6; border-right: 3px solid #1976d2; }
+  .nav-icon { width: 20px; height: 20px; opacity: 0.7; }
+  .nav-badge { margin-left: auto; background: #f44336; color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+  .header { position: fixed; top: 0; left: 240px; right: 0; height: 64px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; z-index: 50; }
+  .header-title { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .header-user { font-size: 14px; color: #666; }
+  .logout-btn { padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: white; color: #666; font-size: 13px; cursor: pointer; }
+
+  .main { margin-left: 240px; margin-top: 64px; padding: 32px; }
+
+  /* Summary cards */
+  .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .summary-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 20px 24px; display: flex; align-items: center; gap: 16px; }
+  .summary-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .summary-icon svg { width: 24px; height: 24px; }
+  .summary-label { font-size: 13px; color: #888; margin-bottom: 4px; }
+  .summary-value { font-size: 28px; font-weight: 700; }
+
+  .toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-label { font-size: 13px; color: #666; }
+  select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: white; }
+  .result-count { margin-left: auto; font-size: 13px; color: #888; }
+
+  /* Call list cards */
+  .call-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 16px; overflow: hidden; transition: box-shadow 0.2s; }
+  .call-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .call-card-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .call-card-left { display: flex; gap: 16px; align-items: center; }
+  .call-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; flex-shrink: 0; }
+  .call-name { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+  .call-meta { font-size: 13px; color: #888; margin-top: 2px; }
+  .call-card-right { display: flex; gap: 8px; align-items: center; }
+
+  .priority-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .priority-high { background: #ffebee; color: #c62828; }
+  .priority-medium { background: #fff3e0; color: #e65100; }
+  .priority-low { background: #fff8e1; color: #f57f17; }
+
+  .call-reason { padding: 0 24px 16px; }
+  .reason-box { background: #fafafa; border-radius: 8px; padding: 14px 16px; border-left: 4px solid; }
+  .reason-high { border-color: #f44336; }
+  .reason-medium { border-color: #ff9800; }
+  .reason-low { border-color: #fdd835; }
+  .reason-title { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; }
+  .reason-detail { font-size: 13px; color: #666; line-height: 1.4; }
+
+  .call-readings { padding: 0 24px 16px; display: flex; gap: 24px; }
+  .reading-snapshot { display: flex; flex-direction: column; }
+  .reading-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .reading-value { font-size: 18px; font-weight: 600; }
+  .val-normal { color: #2e7d32; }
+  .val-elevated { color: #f57f17; }
+  .val-stage1 { color: #e65100; }
+  .val-stage2 { color: #c62828; }
+  .val-crisis { color: #b71c1c; }
+
+  .call-actions { padding: 12px 24px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; background: #fafafa; }
+  .action-btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: #1976d2; color: white; }
+  .btn-primary:hover { background: #1565c0; }
+  .btn-secondary { background: white; color: #333; border: 1px solid #ddd; }
+  .btn-secondary:hover { background: #f5f5f5; }
+  .btn-success { background: #4caf50; color: white; }
+  .btn-success:hover { background: #43a047; }
+  .btn-view { background: #e3f2fd; color: #1565c0; }
+  .btn-view:hover { background: #bbdefb; }
+
+  .last-note { padding: 0 24px 16px; }
+  .note-preview { font-size: 13px; color: #888; font-style: italic; }
+  .note-date { font-size: 11px; color: #bbb; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"><svg viewBox="0 0 24 24"><path fill="white" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
+    <div><div class="sidebar-title">HTN Monitor</div><div class="sidebar-subtitle">Admin Dashboard</div></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="dashboard.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> Dashboard</a>
+    <a class="nav-item" href="users.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg> Users <span class="nav-badge">7</span></a>
+    <a class="nav-item active" href="call-list.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1.02 1.02 0 00-1.02.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg> Call List <span class="nav-badge" style="background:#ff9800">3</span></a>
+    <a class="nav-item" href="readings.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg> Readings</a>
+    <a class="nav-item" href="charts.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg> Charts</a>
+  </div>
+</nav>
+
+<header class="header">
+  <h1 class="header-title">Call List</h1>
+  <div class="header-right">
+    <span class="header-user">admin@htnmonitor.org</span>
+    <button class="logout-btn">Logout</button>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- Summary -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="summary-icon" style="background: #ffebee;">
+        <svg viewBox="0 0 24 24" fill="#c62828"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+      </div>
+      <div>
+        <div class="summary-label">High Priority</div>
+        <div class="summary-value" style="color: #c62828;">1</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-icon" style="background: #fff3e0;">
+        <svg viewBox="0 0 24 24" fill="#e65100"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      </div>
+      <div>
+        <div class="summary-label">Medium Priority</div>
+        <div class="summary-value" style="color: #e65100;">1</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-icon" style="background: #fff8e1;">
+        <svg viewBox="0 0 24 24" fill="#f57f17"><path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>
+      </div>
+      <div>
+        <div class="summary-label">Low Priority</div>
+        <div class="summary-value" style="color: #f57f17;">1</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="filter-group">
+      <span class="filter-label">Priority:</span>
+      <select>
+        <option selected>All Priorities</option>
+        <option>High</option>
+        <option>Medium</option>
+        <option>Low</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Status:</span>
+      <select>
+        <option selected>Needs Follow-up</option>
+        <option>Contacted</option>
+        <option>Resolved</option>
+        <option>All</option>
+      </select>
+    </div>
+    <span class="result-count">3 patients need follow-up</span>
+  </div>
+
+  <!-- HIGH PRIORITY -->
+  <div class="call-card">
+    <div class="call-card-header">
+      <div class="call-card-left">
+        <div class="call-avatar" style="background: #ffebee; color: #c62828;">LT</div>
+        <div>
+          <div class="call-name">Linda Thompson</div>
+          <div class="call-meta">SEIU 1199 &middot; Member since Oct 2025 &middot; 89 readings</div>
+        </div>
+      </div>
+      <div class="call-card-right">
+        <span class="priority-badge priority-high">&#9888; HIGH PRIORITY</span>
+      </div>
+    </div>
+    <div class="call-reason">
+      <div class="reason-box reason-high">
+        <div class="reason-title">Hypertensive Crisis Detected</div>
+        <div class="reason-detail">Reading of <strong>185/122 mmHg</strong> recorded today at 1:12 PM. This is the 2nd crisis-level reading in the past 7 days. Immediate follow-up recommended.</div>
+      </div>
+    </div>
+    <div class="call-readings">
+      <div class="reading-snapshot">
+        <span class="reading-label">Latest</span>
+        <span class="reading-value val-crisis">185/122</span>
+      </div>
+      <div class="reading-snapshot">
+        <span class="reading-label">7-Day Avg</span>
+        <span class="reading-value val-stage2">152/96</span>
+      </div>
+      <div class="reading-snapshot">
+        <span class="reading-label">30-Day Avg</span>
+        <span class="reading-value val-stage2">146/94</span>
+      </div>
+      <div class="reading-snapshot">
+        <span class="reading-label">Heart Rate</span>
+        <span class="reading-value" style="color:#666">98 bpm</span>
+      </div>
+    </div>
+    <div class="last-note">
+      <span class="note-date">Last note: Jan 25, 2026</span>
+      <div class="note-preview">"Patient reports inconsistent medication schedule. Referred to primary care physician."</div>
+    </div>
+    <div class="call-actions">
+      <button class="action-btn btn-primary">Mark as Contacted</button>
+      <button class="action-btn btn-view" onclick="window.location='patient-detail.html'">View Patient</button>
+      <button class="action-btn btn-secondary">Add Note</button>
+      <button class="action-btn btn-success" style="margin-left: auto;">Resolve</button>
+    </div>
+  </div>
+
+  <!-- MEDIUM PRIORITY -->
+  <div class="call-card">
+    <div class="call-card-header">
+      <div class="call-card-left">
+        <div class="call-avatar" style="background: #fff3e0; color: #e65100;">JW</div>
+        <div>
+          <div class="call-name">James Williams</div>
+          <div class="call-meta">SEIU 1199 &middot; Member since Nov 2025 &middot; 127 readings</div>
+        </div>
+      </div>
+      <div class="call-card-right">
+        <span class="priority-badge priority-medium">&#9888; MEDIUM</span>
+      </div>
+    </div>
+    <div class="call-reason">
+      <div class="reason-box reason-medium">
+        <div class="reason-title">Consistent Stage 1 Readings</div>
+        <div class="reason-detail">Evening readings have been consistently in Stage 1 range (130-139/80-89) for the past 14 days. 8 of last 10 evening readings are Stage 1 or higher.</div>
+      </div>
+    </div>
+    <div class="call-readings">
+      <div class="reading-snapshot">
+        <span class="reading-label">Latest</span>
+        <span class="reading-value val-stage1">134/86</span>
+      </div>
+      <div class="reading-snapshot">
+        <span class="reading-label">7-Day Avg</span>
+        <span class="reading-value val-stage1">131/84</span>
+      </div>
+      <div class="reading-snapshot">
+        <span class="reading-label">30-Day Avg</span>
+        <span class="reading-value val-elevated">128/82</span>
+      </div>
+      <div class="reading-snapshot">
+        <span class="reading-label">Heart Rate</span>
+        <span class="reading-value" style="color:#666">76 bpm</span>
+      </div>
+    </div>
+    <div class="last-note">
+      <span class="note-date">Last note: Jan 28, 2026</span>
+      <div class="note-preview">"Flagged for follow-up. Recommend scheduling a call to discuss medication adherence."</div>
+    </div>
+    <div class="call-actions">
+      <button class="action-btn btn-primary">Mark as Contacted</button>
+      <button class="action-btn btn-view" onclick="window.location='patient-detail.html'">View Patient</button>
+      <button class="action-btn btn-secondary">Add Note</button>
+      <button class="action-btn btn-success" style="margin-left: auto;">Resolve</button>
+    </div>
+  </div>
+
+  <!-- LOW PRIORITY -->
+  <div class="call-card">
+    <div class="call-card-header">
+      <div class="call-card-left">
+        <div class="call-avatar" style="background: #fff8e1; color: #f57f17;">RM</div>
+        <div>
+          <div class="call-name">Rosa Martinez</div>
+          <div class="call-meta">Local 32BJ &middot; Member since Dec 2025 &middot; 52 readings</div>
+        </div>
+      </div>
+      <div class="call-card-right">
+        <span class="priority-badge priority-low">LOW</span>
+      </div>
+    </div>
+    <div class="call-reason">
+      <div class="reason-box reason-low">
+        <div class="reason-title">No Readings in 5 Days</div>
+        <div class="reason-detail">Patient was submitting daily readings but hasn't submitted any since Jan 25. Previous readings were in the Elevated range. Check in to ensure continued monitoring.</div>
+      </div>
+    </div>
+    <div class="call-readings">
+      <div class="reading-snapshot">
+        <span class="reading-label">Last Reading</span>
+        <span class="reading-value val-elevated">126/79</span>
+      </div>
+      <div class="reading-snapshot">
+        <span class="reading-label">30-Day Avg</span>
+        <span class="reading-value val-elevated">124/78</span>
+      </div>
+      <div class="reading-snapshot">
+        <span class="reading-label">Last Active</span>
+        <span class="reading-value" style="color:#666; font-size: 16px;">5 days ago</span>
+      </div>
+    </div>
+    <div class="call-actions">
+      <button class="action-btn btn-primary">Mark as Contacted</button>
+      <button class="action-btn btn-view">View Patient</button>
+      <button class="action-btn btn-secondary">Add Note</button>
+      <button class="action-btn btn-success" style="margin-left: auto;">Resolve</button>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>

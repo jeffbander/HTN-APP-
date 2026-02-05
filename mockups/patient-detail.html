@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patient Detail - HTN Monitor Admin</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: #1a1a2e; color: white; z-index: 100; }
+  .sidebar-header { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 12px; }
+  .sidebar-logo { width: 36px; height: 36px; background: #1976d2; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .sidebar-logo svg { width: 20px; height: 20px; fill: white; }
+  .sidebar-title { font-size: 16px; font-weight: 600; }
+  .sidebar-subtitle { font-size: 11px; color: rgba(255,255,255,0.5); }
+  .nav-section { padding: 16px 0; }
+  .nav-label { padding: 8px 20px; font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 20px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; transition: all 0.2s; cursor: pointer; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+  .nav-item.active { background: rgba(25,118,210,0.2); color: #64b5f6; border-right: 3px solid #1976d2; }
+  .nav-icon { width: 20px; height: 20px; opacity: 0.7; }
+  .nav-badge { margin-left: auto; background: #f44336; color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+  .header { position: fixed; top: 0; left: 240px; right: 0; height: 64px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; z-index: 50; }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .back-btn { display: flex; align-items: center; gap: 6px; color: #1976d2; text-decoration: none; font-size: 14px; cursor: pointer; }
+  .back-btn:hover { text-decoration: underline; }
+  .header-title { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .header-user { font-size: 14px; color: #666; }
+  .logout-btn { padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: white; color: #666; font-size: 13px; cursor: pointer; }
+
+  .main { margin-left: 240px; margin-top: 64px; padding: 32px; }
+
+  /* Patient header */
+  .patient-header { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 28px 32px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .patient-info { display: flex; gap: 24px; align-items: center; }
+  .patient-avatar { width: 64px; height: 64px; border-radius: 50%; background: #e3f2fd; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 600; color: #1976d2; }
+  .patient-name { font-size: 24px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+  .patient-meta { display: flex; gap: 24px; margin-top: 8px; }
+  .meta-item { font-size: 13px; color: #888; }
+  .meta-item span { color: #333; font-weight: 500; }
+  .patient-actions { display: flex; gap: 12px; align-items: center; }
+  .action-btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; }
+  .btn-call { background: #1976d2; color: white; }
+  .btn-call:hover { background: #1565c0; }
+  .btn-flag { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+  .btn-deactivate { background: #ffebee; color: #c62828; }
+
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .badge-green { background: #e8f5e9; color: #2e7d32; }
+  .badge-orange { background: #fff3e0; color: #e65100; }
+  .badge-red { background: #ffebee; color: #c62828; }
+
+  /* Stats row */
+  .patient-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .mini-stat { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 20px; }
+  .mini-stat-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .mini-stat-value { font-size: 28px; font-weight: 700; }
+  .mini-stat-sub { font-size: 12px; color: #999; margin-top: 4px; }
+  .bp-value { display: flex; align-items: baseline; gap: 4px; }
+  .bp-slash { font-size: 20px; color: #ccc; font-weight: 400; }
+  .val-normal { color: #2e7d32; }
+  .val-elevated { color: #f57f17; }
+  .val-stage1 { color: #e65100; }
+  .val-stage2 { color: #c62828; }
+
+  /* Two column layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .full-width { grid-column: 1 / -1; }
+
+  .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+  .card-header { padding: 20px 24px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+  .card-title { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+  .card-action { font-size: 13px; color: #1976d2; text-decoration: none; cursor: pointer; }
+  .card-body { padding: 24px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 12px 20px; font-size: 12px; text-transform: uppercase; color: #888; letter-spacing: 0.5px; background: #fafafa; border-bottom: 1px solid #eee; }
+  td { padding: 12px 20px; font-size: 14px; color: #333; border-bottom: 1px solid #f5f5f5; }
+
+  .bp-category { font-size: 11px; padding: 3px 8px; border-radius: 10px; font-weight: 500; }
+  .cat-normal { background: #e8f5e9; color: #2e7d32; }
+  .cat-elevated { background: #fff8e1; color: #f57f17; }
+  .cat-stage1 { background: #fff3e0; color: #e65100; }
+  .cat-stage2 { background: #ffebee; color: #c62828; }
+
+  /* Chart */
+  .chart-legend { display: flex; gap: 20px; padding: 0 0 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; }
+  .legend-line { width: 16px; height: 3px; border-radius: 2px; }
+  .grid-line { stroke: #f0f0f0; stroke-width: 1; }
+  .axis-label { font-size: 10px; fill: #999; }
+
+  /* Notes section */
+  .note { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; }
+  .note:last-child { border-bottom: none; }
+  .note-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .note-author { font-size: 13px; font-weight: 600; color: #333; }
+  .note-date { font-size: 12px; color: #999; }
+  .note-text { font-size: 14px; color: #555; line-height: 1.5; }
+  .note-input { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px; font-family: inherit; }
+  .note-submit { margin-top: 12px; padding: 8px 20px; background: #1976d2; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-top: 1px solid #eee; }
+  .pagination-info { font-size: 13px; color: #888; }
+  .pagination-btns { display: flex; gap: 4px; }
+  .page-btn { padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; font-size: 12px; cursor: pointer; }
+  .page-btn.active { background: #1976d2; color: white; border-color: #1976d2; }
+
+  .flag-indicator { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #fff3e0; border-radius: 8px; border: 1px solid #ffcc80; font-size: 13px; color: #e65100; margin-left: 16px; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"><svg viewBox="0 0 24 24"><path fill="white" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
+    <div><div class="sidebar-title">HTN Monitor</div><div class="sidebar-subtitle">Admin Dashboard</div></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="dashboard.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> Dashboard</a>
+    <a class="nav-item active" href="users.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg> Users <span class="nav-badge">7</span></a>
+    <a class="nav-item" href="call-list.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1.02 1.02 0 00-1.02.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg> Call List <span class="nav-badge" style="background:#ff9800">3</span></a>
+    <a class="nav-item" href="readings.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg> Readings</a>
+    <a class="nav-item" href="charts.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg> Charts</a>
+  </div>
+</nav>
+
+<header class="header">
+  <div class="header-left">
+    <a class="back-btn" href="users.html">&larr; Back to Users</a>
+    <h1 class="header-title">Patient Detail</h1>
+  </div>
+  <div class="header-right">
+    <span class="header-user">admin@htnmonitor.org</span>
+    <button class="logout-btn">Logout</button>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- Patient Header Card -->
+  <div class="patient-header">
+    <div class="patient-info">
+      <div class="patient-avatar">JW</div>
+      <div>
+        <div style="display: flex; align-items: center;">
+          <div class="patient-name">James Williams</div>
+          <div class="flag-indicator">&#9888; Flagged for follow-up</div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <span class="badge badge-green">Active</span>
+          <span class="badge badge-green">Approved</span>
+        </div>
+        <div class="patient-meta">
+          <div class="meta-item">Email: <span>james.w@email.com</span></div>
+          <div class="meta-item">DOB: <span>March 15, 1968</span></div>
+          <div class="meta-item">Union: <span>SEIU 1199</span></div>
+          <div class="meta-item">Member since: <span>Nov 12, 2025</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="patient-actions">
+      <button class="action-btn btn-flag">&#9888; Remove Flag</button>
+      <button class="action-btn btn-deactivate">Deactivate</button>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="patient-stats">
+    <div class="mini-stat">
+      <div class="mini-stat-label">Latest Reading</div>
+      <div class="bp-value">
+        <span class="mini-stat-value val-stage1">134</span>
+        <span class="bp-slash">/</span>
+        <span class="mini-stat-value val-stage1">86</span>
+      </div>
+      <div class="mini-stat-sub">Today at 2:30 PM &middot; <span class="bp-category cat-stage1">Stage 1</span></div>
+    </div>
+    <div class="mini-stat">
+      <div class="mini-stat-label">30-Day Average</div>
+      <div class="bp-value">
+        <span class="mini-stat-value val-elevated">128</span>
+        <span class="bp-slash">/</span>
+        <span class="mini-stat-value val-normal">82</span>
+      </div>
+      <div class="mini-stat-sub">Based on 45 readings</div>
+    </div>
+    <div class="mini-stat">
+      <div class="mini-stat-label">Total Readings</div>
+      <div class="mini-stat-value" style="color: #1976d2;">127</div>
+      <div class="mini-stat-sub">Since Nov 12, 2025</div>
+    </div>
+    <div class="mini-stat">
+      <div class="mini-stat-label">Readings This Week</div>
+      <div class="mini-stat-value" style="color: #1976d2;">8</div>
+      <div class="mini-stat-sub">Avg 1.1/day</div>
+    </div>
+  </div>
+
+  <!-- BP Trend Chart -->
+  <div class="card full-width" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <span class="card-title">Blood Pressure History</span>
+      <div style="display: flex; gap: 4px;">
+        <button class="page-btn active" style="font-size:12px">30 Days</button>
+        <button class="page-btn" style="font-size:12px">90 Days</button>
+        <button class="page-btn" style="font-size:12px">All Time</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-line" style="background:#f44336"></div> Systolic</div>
+        <div class="legend-item"><div class="legend-line" style="background:#2196f3"></div> Diastolic</div>
+        <div class="legend-item"><div class="legend-line" style="background:#4caf50"></div> Heart Rate</div>
+      </div>
+      <svg viewBox="0 0 800 200" style="width:100%">
+        <!-- Grid -->
+        <line x1="40" y1="10" x2="780" y2="10" class="grid-line"/>
+        <line x1="40" y1="50" x2="780" y2="50" class="grid-line"/>
+        <line x1="40" y1="90" x2="780" y2="90" class="grid-line"/>
+        <line x1="40" y1="130" x2="780" y2="130" class="grid-line"/>
+        <line x1="40" y1="170" x2="780" y2="170" class="grid-line"/>
+
+        <text x="35" y="14" class="axis-label" text-anchor="end">160</text>
+        <text x="35" y="54" class="axis-label" text-anchor="end">140</text>
+        <text x="35" y="94" class="axis-label" text-anchor="end">120</text>
+        <text x="35" y="134" class="axis-label" text-anchor="end">100</text>
+        <text x="35" y="174" class="axis-label" text-anchor="end">80</text>
+
+        <!-- Stage thresholds -->
+        <line x1="40" y1="50" x2="780" y2="50" stroke="#f44336" stroke-width="1" stroke-dasharray="4,4" opacity="0.2"/>
+        <line x1="40" y1="90" x2="780" y2="90" stroke="#ff9800" stroke-width="1" stroke-dasharray="4,4" opacity="0.2"/>
+
+        <!-- Systolic readings (individual dots + line) -->
+        <polyline fill="none" stroke="#f44336" stroke-width="2" points="
+          60,82 85,70 110,90 135,78 160,66 185,86 210,74 235,82
+          260,70 285,90 310,78 335,86 360,74 385,82 410,66
+          435,78 460,86 485,70 510,82 535,74 560,90 585,78
+          610,86 635,70 660,82 685,74 710,66 735,78 760,74
+        "/>
+
+        <!-- Diastolic readings -->
+        <polyline fill="none" stroke="#2196f3" stroke-width="2" points="
+          60,150 85,154 110,146 135,158 160,150 185,142 210,154 235,150
+          260,158 285,146 310,150 335,154 360,146 385,158 410,150
+          435,146 460,154 485,142 510,150 535,158 560,146 585,154
+          610,150 635,146 660,158 685,150 710,142 735,154 760,150
+        "/>
+
+        <!-- Heart rate -->
+        <polyline fill="none" stroke="#4caf50" stroke-width="1.5" stroke-dasharray="4,3" points="
+          60,130 85,126 110,134 135,130 160,122 185,130 210,126 235,134
+          260,130 285,126 310,122 335,130 360,134 385,126 410,130
+          435,122 460,126 485,134 510,130 535,126 560,130 585,122
+          610,134 635,130 660,126 685,130 710,122 735,126 760,130
+        "/>
+
+        <!-- X labels -->
+        <text x="60" y="192" class="axis-label" text-anchor="middle">Jan 1</text>
+        <text x="210" y="192" class="axis-label" text-anchor="middle">Jan 7</text>
+        <text x="360" y="192" class="axis-label" text-anchor="middle">Jan 14</text>
+        <text x="510" y="192" class="axis-label" text-anchor="middle">Jan 21</text>
+        <text x="660" y="192" class="axis-label" text-anchor="middle">Jan 28</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- Reading History Table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Reading History</span>
+        <a class="card-action">Export CSV</a>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Systolic</th>
+            <th>Diastolic</th>
+            <th>HR</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Jan 30, 2:30 PM</td>
+            <td style="color:#e65100; font-weight:600">134</td>
+            <td style="color:#e65100; font-weight:600">86</td>
+            <td>78</td>
+            <td><span class="bp-category cat-stage1">Stage 1</span></td>
+          </tr>
+          <tr>
+            <td>Jan 30, 8:15 AM</td>
+            <td style="color:#2e7d32; font-weight:600">118</td>
+            <td style="color:#2e7d32; font-weight:600">76</td>
+            <td>72</td>
+            <td><span class="bp-category cat-normal">Normal</span></td>
+          </tr>
+          <tr>
+            <td>Jan 29, 7:45 PM</td>
+            <td style="color:#f57f17; font-weight:600">126</td>
+            <td style="color:#2e7d32; font-weight:600">79</td>
+            <td>74</td>
+            <td><span class="bp-category cat-elevated">Elevated</span></td>
+          </tr>
+          <tr>
+            <td>Jan 29, 8:00 AM</td>
+            <td style="color:#e65100; font-weight:600">132</td>
+            <td style="color:#e65100; font-weight:600">84</td>
+            <td>70</td>
+            <td><span class="bp-category cat-stage1">Stage 1</span></td>
+          </tr>
+          <tr>
+            <td>Jan 28, 9:10 PM</td>
+            <td style="color:#c62828; font-weight:600">142</td>
+            <td style="color:#c62828; font-weight:600">92</td>
+            <td>82</td>
+            <td><span class="bp-category cat-stage2">Stage 2</span></td>
+          </tr>
+          <tr>
+            <td>Jan 28, 7:30 AM</td>
+            <td style="color:#f57f17; font-weight:600">124</td>
+            <td style="color:#2e7d32; font-weight:600">78</td>
+            <td>68</td>
+            <td><span class="bp-category cat-elevated">Elevated</span></td>
+          </tr>
+          <tr>
+            <td>Jan 27, 8:45 PM</td>
+            <td style="color:#e65100; font-weight:600">136</td>
+            <td style="color:#e65100; font-weight:600">88</td>
+            <td>76</td>
+            <td><span class="bp-category cat-stage1">Stage 1</span></td>
+          </tr>
+          <tr>
+            <td>Jan 27, 7:15 AM</td>
+            <td style="color:#2e7d32; font-weight:600">116</td>
+            <td style="color:#2e7d32; font-weight:600">74</td>
+            <td>66</td>
+            <td><span class="bp-category cat-normal">Normal</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pagination">
+        <span class="pagination-info">1-8 of 127 readings</span>
+        <div class="pagination-btns">
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">...</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes Section -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Admin Notes</span>
+        <span style="font-size: 12px; color: #999;">3 notes</span>
+      </div>
+      <div style="padding: 20px;">
+        <textarea class="note-input" placeholder="Add a note about this patient..."></textarea>
+        <button class="note-submit">Add Note</button>
+      </div>
+      <div class="note">
+        <div class="note-header">
+          <span class="note-author">Dr. Sarah Chen</span>
+          <span class="note-date">Jan 28, 2026 at 3:15 PM</span>
+        </div>
+        <div class="note-text">Patient flagged for follow-up. Evening readings consistently Stage 1+. Recommend scheduling a call to discuss medication adherence and lifestyle changes.</div>
+      </div>
+      <div class="note">
+        <div class="note-header">
+          <span class="note-author">Admin</span>
+          <span class="note-date">Jan 15, 2026 at 10:00 AM</span>
+        </div>
+        <div class="note-text">Called patient re: Stage 2 reading on Jan 14. Patient reports missed medication. Will follow up in 2 weeks.</div>
+      </div>
+      <div class="note">
+        <div class="note-header">
+          <span class="note-author">Admin</span>
+          <span class="note-date">Dec 20, 2025 at 2:30 PM</span>
+        </div>
+        <div class="note-text">Patient onboarded successfully. Initial readings in elevated range. Baseline established.</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,408 @@
+.loading {
+  padding: 64px;
+  text-align: center;
+  color: #888;
+  font-size: 16px;
+}
+
+.patientHeader {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.patientInfo {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.patientAvatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #e3f2fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1976d2;
+  flex-shrink: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+}
+
+.patientName {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.flagIndicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #fff3e0;
+  border-radius: 8px;
+  border: 1px solid #ffcc80;
+  font-size: 13px;
+  color: #e65100;
+  margin-left: 16px;
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.patientMeta {
+  display: flex;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.metaItem {
+  font-size: 13px;
+  color: #888;
+}
+
+.metaItem span {
+  color: #333;
+  font-weight: 500;
+}
+
+.patientActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btnFlag {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffcc80;
+}
+
+.btnDeactivate {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #ffebee;
+  color: #c62828;
+  border: none;
+}
+
+.healthSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 24px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.infoItem:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+.infoLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.infoValue {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.patientStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.miniStat {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+}
+
+.miniStatLabel {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.miniStatValue {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.miniStatSub {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.bpValue {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.bpSlash {
+  font-size: 20px;
+  color: #ccc;
+  font-weight: 400;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.cardBody {
+  padding: 24px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #888;
+  letter-spacing: 0.5px;
+  background: #fafafa;
+  border-bottom: 1px solid #eee;
+}
+
+.table td {
+  padding: 12px 20px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.noteForm {
+  padding: 20px;
+}
+
+.noteInput {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  outline: none;
+}
+
+.noteInput:focus {
+  border-color: #1976d2;
+}
+
+.noteSubmit {
+  margin-top: 12px;
+  padding: 8px 20px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.noteSubmit:hover {
+  background: #1565c0;
+}
+
+.note {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.note:last-child {
+  border-bottom: none;
+}
+
+.noteHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.noteAuthor {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.noteDate {
+  font-size: 12px;
+  color: #999;
+}
+
+.noteText {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* Contact History Timeline */
+.contactTimeline {
+  padding: 0;
+}
+
+.contactItem {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.contactItem:last-child {
+  border-bottom: none;
+}
+
+.contactItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contactItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.contactItemRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.outcomeBadge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.contactCaller {
+  font-size: 13px;
+  color: #555;
+}
+
+.contactDate {
+  font-size: 12px;
+  color: #999;
+}
+
+.contactFollowUp {
+  font-size: 12px;
+  color: #1976d2;
+  background: #e3f2fd;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.contactIndicator {
+  font-size: 12px;
+  color: #666;
+  background: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.contactNotes {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+  padding-left: 4px;
+}
+
+.expandBtn {
+  background: none;
+  border: none;
+  color: #1976d2;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.expandBtn:hover {
+  text-decoration: underline;
+}

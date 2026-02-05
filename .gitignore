@@ -1,0 +1,48 @@
+# Sensitive files
+backend/.env
+backend/certs/
+backend/instance/
+backend/logs/
+
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+admin-dashboard/node_modules/
+admin-dashboard/dist/
+
+# Flutter
+FlutterAppSamantha/.dart_tool/
+FlutterAppSamantha/build/
+FlutterAppSamantha/.flutter-plugins
+FlutterAppSamantha/.flutter-plugins-dependencies
+FlutterAppSamantha/ios/Pods/
+FlutterAppSamantha/ios/.symlinks/
+FlutterAppSamantha/ios/Flutter/Flutter.framework
+FlutterAppSamantha/ios/Flutter/Flutter.podspec
+FlutterAppSamantha/ios/Flutter/Generated.xcconfig
+FlutterAppSamantha/ios/Flutter/flutter_export_environment.sh
+FlutterAppSamantha/ios/Flutter/App.framework
+FlutterAppSamantha/.packages
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Secrets / credentials
+FlutterAppSamantha/assets/service-account.json
+FlutterAppSamantha/assets/userServiceAccount.json
+FlutterAppSamantha/**/keystore.properties
+FlutterAppSamantha/**/*.jks
+FlutterAppSamantha/upload_certificate.pem
+
+# Archives / temp
+*.zip
+flutter_application_1/
+nul
+tmpclaude-*

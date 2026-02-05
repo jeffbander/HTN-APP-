@@ -1,0 +1,269 @@
+.statsRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.miniStat {
+  background: white;
+  border-radius: 10px;
+  padding: 16px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  min-width: 120px;
+  text-align: center;
+}
+
+.miniStatLabel {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.miniStatValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  font-size: 13px;
+  color: #666;
+}
+
+.select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.searchBox {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 250px;
+  outline: none;
+}
+
+.searchBox:focus {
+  border-color: #1976d2;
+}
+
+.resultCount {
+  margin-left: auto;
+  font-size: 13px;
+  color: #888;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.loading {
+  padding: 48px;
+  text-align: center;
+  color: #888;
+}
+
+.errorBanner {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.retryBtn {
+  padding: 4px 12px;
+  border: 1px solid #c62828;
+  border-radius: 4px;
+  background: white;
+  color: #c62828;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.retryBtn:hover {
+  background: #ffcdd2;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #888;
+  letter-spacing: 0.5px;
+  background: #fafafa;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.table tr:hover td {
+  background: #fafafa;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.sortableHeader {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortableHeader:hover {
+  color: #1976d2;
+}
+
+.nameLink {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nameLink:hover {
+  text-decoration: underline;
+}
+
+.checkIcon {
+  color: #4caf50;
+  font-size: 16px;
+}
+
+.xIcon {
+  color: #ccc;
+  font-size: 16px;
+}
+
+.actionBtn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnApprove {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.btnApprove:hover {
+  background: #c8e6c9;
+}
+
+.btnDeactivate {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.btnDeactivate:hover {
+  background: #ffcdd2;
+}
+
+.btnDisabled {
+  background: #f5f5f5;
+  color: #bbb;
+  cursor: default;
+}
+
+/* Multi-select dropdown */
+.multiSelect {
+  position: relative;
+}
+
+.multiSelectBtn {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.multiSelectBtn:hover {
+  border-color: #1976d2;
+}
+
+.multiSelectArrow {
+  font-size: 9px;
+  color: #999;
+}
+
+.multiSelectDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 8px 0;
+  margin-top: 4px;
+}
+
+.multiSelectOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.multiSelectOption:hover {
+  background: #f5f5f5;
+}
+
+.multiSelectOption input[type="checkbox"] {
+  accent-color: #1976d2;
+}
