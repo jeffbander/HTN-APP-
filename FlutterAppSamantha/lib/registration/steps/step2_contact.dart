@@ -22,21 +22,27 @@ class Step2Contact extends StatefulWidget {
 class _Step2ContactState extends State<Step2Contact> {
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  late TextEditingController _addressController;
+  late TextEditingController _streetController;
+  late TextEditingController _cityController;
+  late TextEditingController _zipController;
 
   @override
   void initState() {
     super.initState();
     _emailController = TextEditingController(text: widget.data.email);
     _phoneController = TextEditingController(text: widget.data.phoneNumber);
-    _addressController = TextEditingController(text: widget.data.address);
+    _streetController = TextEditingController(text: widget.data.streetAddress);
+    _cityController = TextEditingController(text: widget.data.city);
+    _zipController = TextEditingController(text: widget.data.zipCode);
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _phoneController.dispose();
-    _addressController.dispose();
+    _streetController.dispose();
+    _cityController.dispose();
+    _zipController.dispose();
     super.dispose();
   }
 
@@ -54,22 +60,29 @@ class _Step2ContactState extends State<Step2Contact> {
     return null;
   }
 
-  String? _validateAddress(String? value) {
+  String? _validateStreet(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Address is required for cuff shipping';
+      return 'Street address is required';
     }
-    // Check for basic address components
-    final hasNumber = RegExp(r'\d').hasMatch(value);
-    final hasZip = RegExp(r'\d{5}').hasMatch(value);
-
-    if (!hasNumber) {
+    if (!RegExp(r'\d').hasMatch(value)) {
       return 'Please include a street number';
     }
-    if (!hasZip) {
-      return 'Please include a 5-digit ZIP code';
+    return null;
+  }
+
+  String? _validateCity(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'City is required';
     }
-    if (value.length < 20) {
-      return 'Please enter a complete address (street, city, state, zip)';
+    return null;
+  }
+
+  String? _validateZip(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'ZIP code is required';
+    }
+    if (!RegExp(r'^\d{5}$').hasMatch(value)) {
+      return 'Please enter a valid 5-digit ZIP code';
     }
     return null;
   }
@@ -134,15 +147,70 @@ class _Step2ContactState extends State<Step2Contact> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AppTextField(
-                    label: 'Full Address',
+                    label: 'Street Address',
                     required: true,
-                    controller: _addressController,
-                    hint: 'Street, City, State, Zip, Apt # (if applicable)',
-                    maxLines: 3,
-                    validator: _validateAddress,
+                    controller: _streetController,
+                    hint: '123 Main St',
+                    validator: _validateStreet,
                     onChanged: (value) {
-                      widget.data.address = value;
+                      widget.data.streetAddress = value;
                     },
+                  ),
+                  const SizedBox(height: AppTheme.spacingMd),
+                  AppTextField(
+                    label: 'City',
+                    required: true,
+                    controller: _cityController,
+                    hint: 'New York',
+                    validator: _validateCity,
+                    onChanged: (value) {
+                      widget.data.city = value;
+                    },
+                  ),
+                  const SizedBox(height: AppTheme.spacingMd),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: AppDropdown<String>(
+                          label: 'State',
+                          required: true,
+                          value: widget.data.state,
+                          items: RegistrationOptions.usStates,
+                          itemLabel: (s) => s,
+                          hint: 'Select...',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'State is required';
+                            }
+                            return null;
+                          },
+                          onChanged: (value) {
+                            setState(() {
+                              widget.data.state = value;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: AppTheme.spacingMd),
+                      Expanded(
+                        child: AppTextField(
+                          label: 'ZIP Code',
+                          required: true,
+                          controller: _zipController,
+                          hint: '10001',
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(5),
+                          ],
+                          validator: _validateZip,
+                          onChanged: (value) {
+                            widget.data.zipCode = value;
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppTheme.spacingSm),
                   Text(

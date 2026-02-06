@@ -12,7 +12,20 @@ class RegistrationData {
   // Step 2: Contact Info
   String? email;
   String? phoneNumber;
-  String? address;
+  String? streetAddress;
+  String? city;
+  String? state;
+  String? zipCode;
+
+  String? get address {
+    if (streetAddress != null && streetAddress!.isNotEmpty &&
+        city != null && city!.isNotEmpty &&
+        state != null && state!.isNotEmpty &&
+        zipCode != null && zipCode!.isNotEmpty) {
+      return '$streetAddress, $city, $state $zipCode';
+    }
+    return null;
+  }
 
   // Step 3: Work Info
   String? union;
@@ -194,6 +207,15 @@ class RegistrationOptions {
     'Current smoker',
     'Former smoker',
     'No significant smoking history',
+  ];
+
+  static const List<String> usStates = [
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL',
+    'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME',
+    'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH',
+    'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI',
+    'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI',
+    'WY',
   ];
 
   static const List<String> financialStressOptions = [
