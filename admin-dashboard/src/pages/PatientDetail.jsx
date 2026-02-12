@@ -10,6 +10,26 @@ import Modal from '../components/shared/Modal'
 import { classifyBP } from '../utils/bpCategory'
 import styles from './PatientDetail.module.css'
 
+const USER_STATUS_OPTIONS = [
+  { value: 'pending_approval', label: 'Pending Approval' },
+  { value: 'pending_registration', label: 'Pending Registration' },
+  { value: 'pending_cuff', label: 'Pending Cuff' },
+  { value: 'pending_first_reading', label: 'Pending First Reading' },
+  { value: 'active', label: 'Active' },
+  { value: 'deactivated', label: 'Deactivated' },
+  { value: 'enrollment_only', label: 'Enrollment Only' },
+]
+
+const STATUS_COLORS = {
+  pending_approval: 'orange',
+  pending_registration: 'orange',
+  pending_cuff: 'orange',
+  pending_first_reading: 'blue',
+  active: 'green',
+  deactivated: 'red',
+  enrollment_only: 'gray',
+}
+
 const OUTCOME_COLORS = {
   completed: { bg: '#e8f5e9', color: '#2e7d32' },
   left_vm: { bg: '#fff3e0', color: '#e65100' },
@@ -118,6 +138,20 @@ export default function PatientDetail() {
     }
   }
 
+  async function handleStatusChange(newStatus) {
+    if (newStatus === user.user_status) return
+    try {
+      await fetchApi(`/admin/users/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ user_status: newStatus }),
+      })
+      const userData = await fetchApi(`/admin/users/${id}`)
+      setUser(userData.user || userData)
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
   function formatDate(iso) {
     if (!iso) return '\u2014'
     return new Date(iso).toLocaleDateString('en-US', {
@@ -178,8 +212,18 @@ export default function PatientDetail() {
               )}
             </div>
             <div className={styles.badges}>
-              <Badge color={user.is_active ? 'green' : 'red'}>{user.is_active ? 'Active' : 'Inactive'}</Badge>
-              <Badge color={user.is_approved ? 'green' : 'orange'}>{user.is_approved ? 'Approved' : 'Pending'}</Badge>
+              <Badge color={STATUS_COLORS[user.user_status] || 'gray'}>
+                {USER_STATUS_OPTIONS.find(o => o.value === user.user_status)?.label || user.user_status}
+              </Badge>
+              <select
+                className={styles.statusSelect}
+                value={user.user_status || ''}
+                onChange={(e) => handleStatusChange(e.target.value)}
+              >
+                {USER_STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </div>
             <div className={styles.patientMeta}>
               <div className={styles.metaItem}>Email: <span>{user.email || '\u2014'}</span></div>

@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'env.dart';
 import 'msg.dart';
+import 'services/dev_mode_service.dart';
 
 class RegisterUserView extends StatefulWidget {
   final BaseMessenger? messenger;
@@ -324,9 +325,10 @@ class _RegisterUserViewState extends State<RegisterUserView> {
 
     if (_devTapCounter >= 5 &&
         loginController.text.trim().toLowerCase() == "tester@gmail.com") {
-      log("✅ DEV MODE ACTIVATED");
+      log("DEV MODE ACTIVATED");
       _devTapCounter = 0;
       _devTapResetTimer?.cancel();
+      DevModeService.instance.isDevMode = true;
       setState(() => isDevModeVisible = true);
       return;
     }

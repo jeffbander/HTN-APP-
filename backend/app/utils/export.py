@@ -31,7 +31,7 @@ def generate_users_csv(users, include_phi=True):
         'id', 'union_name', 'gender', 'race', 'ethnicity', 'work_status', 'rank',
         'height_inches', 'weight_lbs', 'chronic_conditions', 'has_high_blood_pressure',
         'smoking_status', 'on_bp_medication', 'missed_doses',
-        'is_active', 'is_approved', 'is_email_verified', 'is_flagged', 'created_at',
+        'is_active', 'user_status', 'is_email_verified', 'is_flagged', 'created_at',
         'exercise_days_per_week', 'exercise_minutes_per_session', 'financial_stress',
         'stress_level', 'loneliness', 'sleep_quality',
     ]
@@ -59,7 +59,7 @@ def generate_users_csv(users, include_phi=True):
             'on_bp_medication': user.on_bp_medication if user.on_bp_medication is not None else '',
             'missed_doses': user.missed_doses if user.missed_doses is not None else '',
             'is_active': user.is_active,
-            'is_approved': user.is_approved,
+            'user_status': user.user_status,
             'is_email_verified': user.is_email_verified,
             'is_flagged': user.is_flagged,
             'created_at': user.created_at.isoformat() if user.created_at else '',

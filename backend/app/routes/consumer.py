@@ -126,19 +126,14 @@ def login():
                   details={'reason': 'not_found', 'email_hash': email_hash})
         return jsonify({'error': 'User not found'}), 404
 
-    if not user.is_active:
+    if user.user_status == 'deactivated' or not user.is_active:
         audit_log('LOGIN_FAILED', 'user', resource_id=str(user.id),
                   details={'reason': 'deactivated', 'email_hash': email_hash},
                   user_id=str(user.id))
-        return jsonify({'error': 'Account is deactivated'}), 403
+        return jsonify({'error': 'Account is deactivated', 'user_status': 'deactivated'}), 403
 
-    if not user.is_approved:
-        audit_log('LOGIN_FAILED', 'user', resource_id=str(user.id),
-                  details={'reason': 'not_approved', 'email_hash': email_hash},
-                  user_id=str(user.id))
-        return jsonify({'error': 'Account pending approval'}), 403
-
-    if not user.is_email_verified:
+    # Email verification required for users past the approval stage
+    if not user.is_email_verified and user.user_status != 'pending_approval':
         audit_log('LOGIN_FAILED', 'user', resource_id=str(user.id),
                   details={'reason': 'email_not_verified', 'email_hash': email_hash},
                   user_id=str(user.id))
@@ -154,6 +149,7 @@ def login():
             'mfa_setup_required': True,
             'tempToken': temp_token,
             'userId': user.id,
+            'user_status': user.user_status,
         }), 200
 
     # MFA: if user has active MFA, require verification
@@ -172,6 +168,7 @@ def login():
             'mfa_required': True,
             'mfa_type': mfa_type,
             'mfa_session_token': mfa_session.session_token,
+            'user_status': user.user_status,
         }), 200
 
     # Email OTP for consumer logins (non-admin users)
@@ -186,6 +183,7 @@ def login():
             'mfa_required': True,
             'mfa_type': 'email',
             'mfa_session_token': mfa_session.session_token,
+            'user_status': user.user_status,
         }), 200
 
     token = generate_single_use_token(user.id, email)
@@ -195,7 +193,8 @@ def login():
 
     return jsonify({
         'singleUseToken': token,
-        'userId': user.id
+        'userId': user.id,
+        'user_status': user.user_status,
     }), 200
 
 
@@ -257,6 +256,7 @@ def verify_mfa():
         return jsonify({
             'singleUseToken': token,
             'userId': user.id,
+            'user_status': user.user_status,
         }), 200
 
     db.session.commit()
@@ -490,6 +490,15 @@ def create_reading():
     )
 
     db.session.add(reading)
+
+    # Auto-transition: pending_first_reading → active on first reading
+    user = User.query.get(g.user_id)
+    if user and user.user_status == 'pending_first_reading':
+        user.user_status = 'active'
+        audit_log('UPDATE', 'user', resource_id=str(user.id),
+                  details={'action': 'auto_status_transition', 'from': 'pending_first_reading', 'to': 'active'},
+                  user_id=str(user.id))
+
     db.session.commit()
 
     return jsonify(reading.to_dict()), 200
@@ -729,6 +738,16 @@ def create_cuff_request():
     cuff_request.shipping_address = address
 
     db.session.add(cuff_request)
+
+    # Auto-transition: move to pending_cuff when cuff is requested
+    user = User.query.get(g.user_id)
+    if user and user.user_status in ('pending_approval', 'pending_registration'):
+        old_status = user.user_status
+        user.user_status = 'pending_cuff'
+        audit_log('UPDATE', 'user', resource_id=str(user.id),
+                  details={'action': 'auto_status_transition', 'from': old_status, 'to': 'pending_cuff'},
+                  user_id=str(user.id))
+
     db.session.commit()
 
     return jsonify(cuff_request.to_dict(include_address=True)), 201
@@ -767,6 +786,15 @@ def mark_cuff_received(request_id):
         return jsonify({'error': f'Cannot mark as received: status is {cuff_request.status}'}), 400
 
     cuff_request.status = 'delivered'
+
+    # Auto-transition: pending_cuff → pending_first_reading when cuff is received
+    user = User.query.get(g.user_id)
+    if user and user.user_status == 'pending_cuff':
+        user.user_status = 'pending_first_reading'
+        audit_log('UPDATE', 'user', resource_id=str(user.id),
+                  details={'action': 'auto_status_transition', 'from': 'pending_cuff', 'to': 'pending_first_reading'},
+                  user_id=str(user.id))
+
     db.session.commit()
 
     audit_log('UPDATE', 'cuff_request', resource_id=str(request_id),

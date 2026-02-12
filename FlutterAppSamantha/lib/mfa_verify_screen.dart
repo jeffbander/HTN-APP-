@@ -7,6 +7,7 @@ import 'widgets/primary_button.dart';
 import 'flaskRegUsr.dart';
 import 'navigationManager.dart';
 import 'sourceManager.dart';
+import 'utils/status_router.dart';
 
 class MfaVerifyScreen extends StatefulWidget {
   final String mfaSessionToken;
@@ -58,8 +59,10 @@ class _MfaVerifyScreenState extends State<MfaVerifyScreen> {
       if (result['status'] == 200) {
         final token = result['token'] as String;
         final userId = result['userId'];
+        final userStatus = result['user_status'] as String? ?? 'active';
         await _storage.write(key: 'auth_token', value: token);
         await _storage.write(key: 'userEmail', value: widget.email);
+        await _storage.write(key: 'user_status', value: userStatus);
         if (userId != null) {
           await _storage.write(key: 'userId', value: userId.toString());
         }
@@ -70,10 +73,17 @@ class _MfaVerifyScreenState extends State<MfaVerifyScreen> {
         } catch (_) {
           // SharedPreferences may not be initialized yet; will sync on next launch
         }
+        // Route based on user_status
         if (mounted) {
-          final navManager = Provider.of<NavigationManager>(context, listen: false);
-          navManager.showMeasurementView();
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          final targetRoute = StatusRouter.routeForStatus(userStatus);
+          if (targetRoute == '/measurement') {
+            final navManager = Provider.of<NavigationManager>(context, listen: false);
+            navManager.userStatus = userStatus;
+            navManager.showMeasurementView();
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          } else {
+            Navigator.of(context).pushNamedAndRemoveUntil(targetRoute, (r) => false);
+          }
         }
       } else if (result['status'] == 429) {
         setState(() {

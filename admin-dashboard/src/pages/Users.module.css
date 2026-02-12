@@ -1,37 +1,84 @@
-.statsRow {
+/* Tab bar */
+.tabBar {
   display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 4px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  border-bottom: 2px solid #eee;
 }
 
-.miniStat {
-  background: white;
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #666;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #1976d2;
+  background: #f5f8ff;
+}
+
+.tabActive {
+  color: #1976d2;
+  font-weight: 600;
+  border-bottom-color: #1976d2;
+}
+
+.tabLabel {
+  font-size: 13px;
+}
+
+.tabBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
   border-radius: 10px;
-  padding: 16px 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  min-width: 120px;
-  text-align: center;
+  background: #eee;
+  color: #666;
 }
 
-.miniStatLabel {
-  font-size: 12px;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
+.badge_green {
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
-.miniStatValue {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1a1a;
+.badge_orange {
+  background: #fff3e0;
+  color: #e65100;
 }
 
+.badge_blue {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.badge_red {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.badge_gray {
+  background: #f5f5f5;
+  color: #666;
+}
+
+/* Toolbar */
 .toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
@@ -50,22 +97,9 @@
   padding: 8px 12px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   background: white;
   cursor: pointer;
-}
-
-.searchBox {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  width: 250px;
-  outline: none;
-}
-
-.searchBox:focus {
-  border-color: #1976d2;
 }
 
 .resultCount {
@@ -74,6 +108,7 @@
   color: #888;
 }
 
+/* Card & Table */
 .card {
   background: white;
   border-radius: 12px;
@@ -164,16 +199,7 @@
   text-decoration: underline;
 }
 
-.checkIcon {
-  color: #4caf50;
-  font-size: 16px;
-}
-
-.xIcon {
-  color: #ccc;
-  font-size: 16px;
-}
-
+/* Action buttons */
 .actionBtn {
   padding: 6px 14px;
   border: none;
@@ -206,64 +232,4 @@
   background: #f5f5f5;
   color: #bbb;
   cursor: default;
-}
-
-/* Multi-select dropdown */
-.multiSelect {
-  position: relative;
-}
-
-.multiSelectBtn {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 13px;
-  background: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.multiSelectBtn:hover {
-  border-color: #1976d2;
-}
-
-.multiSelectArrow {
-  font-size: 9px;
-  color: #999;
-}
-
-.multiSelectDropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  z-index: 100;
-  min-width: 180px;
-  max-height: 240px;
-  overflow-y: auto;
-  padding: 8px 0;
-  margin-top: 4px;
-}
-
-.multiSelectOption {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.multiSelectOption:hover {
-  background: #f5f5f5;
-}
-
-.multiSelectOption input[type="checkbox"] {
-  accent-color: #1976d2;
 }

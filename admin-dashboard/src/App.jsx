@@ -26,9 +26,9 @@ export default function App() {
 
   const loadBadges = useCallback(async () => {
     try {
-      const data = await fetchApi('/admin/stats')
+      const data = await fetchApi('/admin/users/tab-counts')
       setBadges({
-        pendingUsers: data.pending_approvals || 0,
+        pendingUsers: data.pending_approval || 0,
       })
     } catch {
       // ignore

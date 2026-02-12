@@ -6,11 +6,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/consumer': {
-        target: 'http://127.0.0.1:5001',
+        target: 'https://127.0.0.1:3001',
         secure: false,
       },
       '/admin': {
-        target: 'http://127.0.0.1:5001',
+        target: 'https://127.0.0.1:3001',
         secure: false,
       },
     },

@@ -15,7 +15,12 @@ import 'registration/registration_wizard.dart';
 import 'devices/device_selection_screen.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
+import 'deactivated_screen.dart';
+import 'registration/pending_approval_screen.dart';
+import 'devices/cuff_request_pending_screen.dart';
+import 'flaskRegUsr.dart';
 import 'services/biometric_service.dart';
+import 'utils/status_router.dart';
 
 enum _AuthResult { authenticated, needsLogin, noToken }
 
@@ -53,6 +58,9 @@ class NavigationManager extends ChangeNotifier {
 
   List<List<dynamic>> supportDeviceInfo = [];
   bool inPairing = false;
+  String userStatus = 'active';
+
+  FlaskRegUsr _makeApi() => FlaskRegUsr();
 
   //------------------------------------------------------
   NavigationManager(this.sourceManager) {
@@ -115,6 +123,27 @@ class NavigationManager extends ChangeNotifier {
 
   //------------------------------------------------------
   Widget get currentViewW => _currentViewW!;
+
+  //------------------------------------------------------
+  /// Show the appropriate screen based on user_status (for non-measurement statuses)
+  void _showStatusScreen(String status) {
+    switch (status) {
+      case 'pending_approval':
+      case 'enrollment_only':
+        _currentViewW = const PendingApprovalScreen();
+        break;
+      case 'pending_cuff':
+        _currentViewW = const CuffRequestPendingScreen();
+        break;
+      case 'deactivated':
+        _currentViewW = const DeactivatedScreen();
+        break;
+      default:
+        _currentViewW = const LoginScreen();
+        break;
+    }
+    notifyListeners();
+  }
 
   //------------------------------------------------------
   /// Called after device pairing or cuff request to show the measurement view
@@ -280,11 +309,36 @@ class NavigationManager extends ChangeNotifier {
           // Check for existing token and biometric auth
           final authResult = await _checkAuthOnLaunch();
           if (authResult == _AuthResult.authenticated) {
-            // Token valid + biometric passed → go to home
-            if (sourceManager.needsDeviceInfo()) {
-              await navigate(ViewType.registerDevice);
+            // Load saved user status and route accordingly
+            const storage = FlutterSecureStorage();
+            final savedStatus = await storage.read(key: 'user_status');
+            userStatus = savedStatus ?? 'active';
+
+            // Fetch fresh status from profile if we have a token
+            final token = await storage.read(key: 'auth_token');
+            if (token != null) {
+              try {
+                final api = _makeApi();
+                final profile = await api.getProfile(token);
+                if (profile != null && profile['user_status'] != null) {
+                  userStatus = profile['user_status'];
+                  await storage.write(key: 'user_status', value: userStatus);
+                }
+              } catch (_) {
+                // Use cached status if profile fetch fails
+              }
+            }
+
+            final route = StatusRouter.routeForStatus(userStatus);
+            if (route == '/measurement') {
+              if (sourceManager.needsDeviceInfo()) {
+                await navigate(ViewType.registerDevice);
+              } else {
+                await navigate(ViewType.startMeasurement);
+              }
             } else {
-              await navigate(ViewType.startMeasurement);
+              // Show the status-appropriate screen directly
+              _showStatusScreen(userStatus);
             }
           } else if (authResult == _AuthResult.needsLogin) {
             // Has token but biometric failed, or token expired

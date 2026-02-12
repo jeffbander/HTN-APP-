@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'widgets/gradient_header.dart';
 import 'widgets/app_card.dart';
 import 'widgets/primary_button.dart';
+import 'services/local_notification_service.dart';
 
 class Reminder {
   final String id;
@@ -125,7 +126,30 @@ class _RemindersScreenState extends State<RemindersScreen> {
       'reminders',
       jsonEncode(_reminders.map((r) => r.toJson()).toList()),
     );
-    // TODO: Schedule actual local notifications here when flutter_local_notifications is configured
+    // Schedule local notifications
+    await _syncNotifications();
+  }
+
+  Future<void> _syncNotifications() async {
+    final notifService = LocalNotificationService.instance;
+    if (!notifService.isInitialized) return;
+
+    // Cancel all existing notifications and re-schedule
+    await notifService.cancelAll();
+
+    for (var i = 0; i < _reminders.length; i++) {
+      final reminder = _reminders[i];
+      if (!reminder.isEnabled) continue;
+
+      await notifService.scheduleDaily(
+        id: i + 1,
+        hour: reminder.time.hour,
+        minute: reminder.time.minute,
+        title: 'BP Reading Reminder',
+        body: reminder.label ?? 'Time to take your blood pressure reading',
+        daysOfWeek: reminder.daysOfWeek,
+      );
+    }
   }
 
   void _addReminder() {
@@ -163,7 +187,22 @@ class _RemindersScreenState extends State<RemindersScreen> {
     );
   }
 
-  void _toggleReminder(Reminder reminder) {
+  void _toggleReminder(Reminder reminder) async {
+    if (!reminder.isEnabled) {
+      // Enabling a reminder — request permission first
+      final granted = await LocalNotificationService.instance.requestPermission();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enable notifications in your device settings to receive reminders.'),
+              backgroundColor: AppTheme.warning,
+            ),
+          );
+        }
+        return;
+      }
+    }
     setState(() {
       reminder.isEnabled = !reminder.isEnabled;
     });

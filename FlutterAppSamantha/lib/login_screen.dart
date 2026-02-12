@@ -8,6 +8,7 @@ import 'widgets/primary_button.dart';
 import 'flaskRegUsr.dart';
 import 'navigationManager.dart';
 import 'sourceManager.dart';
+import 'utils/status_router.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? prefillEmail;
@@ -74,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 'mfa_session_token': result['mfa_session_token'],
                 'mfa_type': result['mfa_type'],
                 'email': email,
+                'user_status': result['user_status'],
               });
             }
             break;
@@ -81,8 +83,10 @@ class _LoginScreenState extends State<LoginScreen> {
           // Store token and email
           final token = result['token'] as String;
           final userId = result['userId'];
+          final userStatus = result['user_status'] as String? ?? 'active';
           await _storage.write(key: 'auth_token', value: token);
           await _storage.write(key: 'userEmail', value: email);
+          await _storage.write(key: 'user_status', value: userStatus);
           if (userId != null) {
             await _storage.write(key: 'userId', value: userId.toString());
           }
@@ -93,12 +97,17 @@ class _LoginScreenState extends State<LoginScreen> {
           } catch (_) {
             // SharedPreferences may not be initialized yet; will sync on next launch
           }
-          // Navigate to measurement view via NavigationManager
+          // Route based on user_status
           if (mounted) {
-            final navManager = Provider.of<NavigationManager>(context, listen: false);
-            navManager.showMeasurementView();
-            // Pop any Navigator routes to return to root Consumer
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            final targetRoute = StatusRouter.routeForStatus(userStatus);
+            if (targetRoute == '/measurement') {
+              final navManager = Provider.of<NavigationManager>(context, listen: false);
+              navManager.userStatus = userStatus;
+              navManager.showMeasurementView();
+              Navigator.of(context).popUntil((r) => r.isFirst);
+            } else {
+              Navigator.of(context).pushReplacementNamed(targetRoute);
+            }
           }
           break;
         case 404:
@@ -107,9 +116,14 @@ class _LoginScreenState extends State<LoginScreen> {
           });
           break;
         case 403:
-          // Not approved or deactivated — navigate to pending approval
+          // Route based on user_status from error response, or fallback to pending-approval
           if (mounted) {
-            Navigator.of(context).pushNamed('/pending-approval');
+            final userStatus = result['user_status'] as String?;
+            if (userStatus == 'deactivated') {
+              Navigator.of(context).pushNamed('/deactivated');
+            } else {
+              Navigator.of(context).pushNamed('/pending-approval');
+            }
           }
           break;
         case 401:

@@ -9,6 +9,7 @@ import 'widgets/primary_button.dart';
 import 'flaskRegUsr.dart';
 import 'historyView.dart';
 import 'msg.dart';
+import 'utils/status_router.dart';
 
 class ProfileScreen extends StatefulWidget {
   final BaseMessenger? messenger;
@@ -119,13 +120,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
 
-      // Determine status
-      String statusText = 'Pending';
-      if (profile['is_approved'] == true) {
-        statusText = 'Approved';
-      } else if (profile['is_active'] == false) {
-        statusText = 'Deactivated';
-      }
+      // Determine status from user_status field
+      final userStatusRaw = profile['user_status'] as String? ?? 'pending_approval';
+      String statusText = StatusRouter.statusLabel(userStatusRaw);
 
       // Get editable fields
       final phone = profile['phone'] ?? '';
@@ -258,6 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     await _storage.delete(key: 'auth_token');
     await _storage.delete(key: 'userId');
+    await _storage.delete(key: 'user_status');
     // Keep userEmail for autofill on next login
     if (mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
@@ -563,7 +561,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         width: 10,
                                         height: 10,
                                         decoration: BoxDecoration(
-                                          color: _status == 'Approved'
+                                          color: _status == 'Active'
                                               ? AppTheme.accentGreen
                                               : _status == 'Deactivated'
                                                   ? AppTheme.error
@@ -575,7 +573,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       Text(
                                         _status.toUpperCase(),
                                         style: AppTheme.labelLarge.copyWith(
-                                          color: _status == 'Approved'
+                                          color: _status == 'Active'
                                               ? AppTheme.accentGreen
                                               : _status == 'Deactivated'
                                                   ? AppTheme.error

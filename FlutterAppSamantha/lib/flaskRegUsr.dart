@@ -143,6 +143,7 @@ class FlaskRegUsr {
             'mfa_required': true,
             'mfa_type': data['mfa_type'],
             'mfa_session_token': data['mfa_session_token'],
+            'user_status': data['user_status'],
           };
         }
 
@@ -158,12 +159,14 @@ class FlaskRegUsr {
           'status': 200,
           'token': data['singleUseToken'],
           'userId': data['userId'],
+          'user_status': data['user_status'],
         };
       } else {
         final data = jsonDecode(resp.body);
         return {
           'status': resp.statusCode,
           'error': data['error'] ?? 'Login failed',
+          'user_status': data['user_status'],
         };
       }
     } catch (e, stack) {
@@ -199,6 +202,7 @@ class FlaskRegUsr {
           'status': 200,
           'token': data['singleUseToken'],
           'userId': data['userId'],
+          'user_status': data['user_status'],
         };
       } else {
         final data = jsonDecode(resp.body);

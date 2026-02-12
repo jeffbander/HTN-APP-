@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Blueprint, request, jsonify, g, Response
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 from app import db
 from app.models import (
     User, BloodPressureReading, AdminNote,
@@ -41,9 +41,9 @@ def admin_required(f):
 def get_stats():
     """Aggregate dashboard statistics."""
     total_users = User.query.count()
-    pending_approvals = User.query.filter_by(is_approved=False, is_active=True).count()
-    approved_users = User.query.filter_by(is_approved=True, is_active=True).count()
-    deactivated_users = User.query.filter_by(is_active=False).count()
+    pending_approvals = User.query.filter_by(user_status='pending_approval').count()
+    approved_users = User.query.filter(User.user_status.in_(['active', 'pending_registration', 'pending_cuff', 'pending_first_reading'])).count()
+    deactivated_users = User.query.filter_by(user_status='deactivated').count()
     flagged_users_count = User.query.filter_by(is_flagged=True).count()
     total_readings = BloodPressureReading.query.count()
 
@@ -63,6 +63,243 @@ def get_stats():
         'total_readings': total_readings,
         'readings_today': readings_today,
     }), 200
+
+
+# ---------- User Tab Endpoints ----------
+
+def _last_reading_subquery():
+    """Returns subquery: (user_id, last_reading_date)"""
+    return (
+        db.session.query(
+            BloodPressureReading.user_id,
+            func.max(BloodPressureReading.reading_date).label('last_reading_date')
+        )
+        .group_by(BloodPressureReading.user_id)
+        .subquery()
+    )
+
+
+def _apply_tab_filters(query, args):
+    """Apply search, union, gender, HTN, sort filters from request args."""
+    union_id = args.get('union_id', type=int)
+    if union_id:
+        query = query.filter(User.union_id == union_id)
+
+    gender = args.get('gender', '').strip()
+    if gender:
+        query = query.filter(User.gender == gender)
+
+    has_htn = args.get('has_htn', '').strip().lower()
+    if has_htn == 'true':
+        query = query.filter(User.has_high_blood_pressure == True)
+    elif has_htn == 'false':
+        query = query.filter(User.has_high_blood_pressure == False)
+
+    sort_by = args.get('sort', 'created_at')
+    sort_dir = args.get('dir', 'desc')
+    sortable = {
+        'created_at': User.created_at,
+        'updated_at': User.updated_at,
+        'union_id': User.union_id,
+    }
+    sort_col = sortable.get(sort_by, User.created_at)
+    query = query.order_by(sort_col.desc() if sort_dir == 'desc' else sort_col.asc())
+
+    page = args.get('page', 1, type=int)
+    per_page = min(args.get('per_page', 50, type=int), 200)
+    search = args.get('search', '').strip()
+
+    return query, search, page, per_page
+
+
+def _paginate_and_search(query, search, page, per_page):
+    """Execute query, apply text search in Python (post-decryption), paginate."""
+    if search:
+        all_users = query.all()
+        filtered = []
+        search_lower = search.lower()
+        for u in all_users:
+            try:
+                name = (u.name or '').lower()
+                email = (u.email or '').lower()
+                if search_lower in name or search_lower in email:
+                    filtered.append(u)
+            except Exception:
+                continue
+        total = len(filtered)
+        start = (page - 1) * per_page
+        users = filtered[start:start + per_page]
+    else:
+        total = query.count()
+        users = query.offset((page - 1) * per_page).limit(per_page).all()
+    return users, total
+
+
+@admin_bp.route('/users/tab-counts', methods=['GET'])
+@token_required
+@admin_required
+def tab_counts():
+    """Return user counts for each dashboard tab."""
+    cutoff = datetime.utcnow() - timedelta(days=240)  # 8 months
+    last_reading = _last_reading_subquery()
+
+    active_count = (
+        db.session.query(func.count(User.id))
+        .outerjoin(last_reading, User.id == last_reading.c.user_id)
+        .filter(User.user_status == 'active')
+        .filter(last_reading.c.last_reading_date >= cutoff)
+        .scalar()
+    )
+
+    auto_deactivated = (
+        db.session.query(func.count(User.id))
+        .outerjoin(last_reading, User.id == last_reading.c.user_id)
+        .filter(User.user_status == 'active')
+        .filter(or_(
+            last_reading.c.last_reading_date < cutoff,
+            last_reading.c.last_reading_date == None
+        ))
+        .scalar()
+    )
+
+    manual_deactivated = (
+        db.session.query(func.count(User.id))
+        .filter(User.user_status == 'deactivated')
+        .scalar()
+    )
+
+    counts = {
+        'all': db.session.query(func.count(User.id)).scalar(),
+        'active': active_count,
+        'pending_approval': User.query.filter_by(user_status='pending_approval').count(),
+        'pending_registration': User.query.filter_by(user_status='pending_registration').count(),
+        'pending_cuff': User.query.filter_by(user_status='pending_cuff').count(),
+        'pending_first_reading': User.query.filter_by(user_status='pending_first_reading').count(),
+        'enrollment_only': User.query.filter_by(user_status='enrollment_only').count(),
+        'deactivated': auto_deactivated + manual_deactivated,
+    }
+
+    return jsonify(counts)
+
+
+@admin_bp.route('/users/tab/<tab_name>', methods=['GET'])
+@token_required
+@admin_required
+def tab_users(tab_name):
+    """Return paginated users for a specific dashboard tab."""
+    cutoff = datetime.utcnow() - timedelta(days=240)
+    last_reading = _last_reading_subquery()
+    args = request.args
+
+    if tab_name == 'all':
+        query = User.query
+    elif tab_name == 'active':
+        query = (
+            db.session.query(User)
+            .outerjoin(last_reading, User.id == last_reading.c.user_id)
+            .filter(User.user_status == 'active')
+            .filter(last_reading.c.last_reading_date >= cutoff)
+        )
+    elif tab_name == 'pending_approval':
+        query = User.query.filter_by(user_status='pending_approval')
+    elif tab_name == 'pending_registration':
+        query = User.query.filter_by(user_status='pending_registration')
+    elif tab_name == 'pending_cuff':
+        query = User.query.filter_by(user_status='pending_cuff')
+    elif tab_name == 'pending_first_reading':
+        query = User.query.filter_by(user_status='pending_first_reading')
+    elif tab_name == 'enrollment_only':
+        query = User.query.filter_by(user_status='enrollment_only')
+    elif tab_name == 'deactivated':
+        query = (
+            db.session.query(User)
+            .outerjoin(last_reading, User.id == last_reading.c.user_id)
+            .filter(or_(
+                User.user_status == 'deactivated',
+                and_(
+                    User.user_status == 'active',
+                    or_(
+                        last_reading.c.last_reading_date < cutoff,
+                        last_reading.c.last_reading_date == None
+                    )
+                )
+            ))
+        )
+    else:
+        return jsonify({'error': f'Unknown tab: {tab_name}'}), 400
+
+    query, search, page, per_page = _apply_tab_filters(query, args)
+    users, total = _paginate_and_search(query, search, page, per_page)
+
+    # Build response with last_reading_date and reading_count
+    user_ids = [u.id for u in users]
+    reading_dates = {}
+    if user_ids:
+        results = (
+            db.session.query(
+                BloodPressureReading.user_id,
+                func.max(BloodPressureReading.reading_date).label('last_date'),
+                func.count(BloodPressureReading.id).label('reading_count')
+            )
+            .filter(BloodPressureReading.user_id.in_(user_ids))
+            .group_by(BloodPressureReading.user_id)
+            .all()
+        )
+        for r in results:
+            reading_dates[r.user_id] = {
+                'last_reading_date': r.last_date.isoformat() if r.last_date else None,
+                'reading_count': r.reading_count,
+            }
+
+    users_data = []
+    for u in users:
+        d = u.to_dict(include_phi=True)
+        rd = reading_dates.get(u.id, {})
+        d['last_reading_date'] = rd.get('last_reading_date')
+        d['reading_count'] = rd.get('reading_count', 0)
+        users_data.append(d)
+
+    return jsonify({
+        'users': users_data,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'pages': (total + per_page - 1) // per_page,
+    })
+
+
+@admin_bp.route('/users/<int:user_id>/status', methods=['PUT'])
+@token_required
+@admin_required
+def change_user_status(user_id):
+    """Admin manually changes a user's status."""
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json()
+    new_status = data.get('user_status')
+
+    valid = [
+        'pending_approval', 'pending_registration', 'pending_cuff',
+        'pending_first_reading', 'active', 'deactivated', 'enrollment_only',
+    ]
+    if new_status not in valid:
+        return jsonify({'error': f'Invalid status. Must be one of: {valid}'}), 400
+
+    old_status = user.user_status
+    user.user_status = new_status
+    user.is_active = new_status not in ('deactivated',)
+
+    db.session.commit()
+
+    audit_log('UPDATE', 'user', resource_id=str(user_id),
+              details={'action': 'status_change', 'old_status': old_status, 'new_status': new_status})
+
+    return jsonify({
+        'message': f'Status changed from {old_status} to {new_status}',
+        'user': user.to_dict(include_phi=True),
+    })
 
 
 # ---------- Users ----------
@@ -97,14 +334,17 @@ def list_users():
     # Status filter
     if status_filter:
         if status_filter == 'pending':
-            query = query.filter_by(is_approved=False, is_active=True)
+            query = query.filter_by(user_status='pending_approval')
         elif status_filter == 'approved':
-            query = query.filter_by(is_approved=True, is_active=True)
+            query = query.filter(User.user_status.in_(['active', 'pending_registration', 'pending_cuff', 'pending_first_reading']))
         elif status_filter == 'deactivated':
-            query = query.filter_by(is_active=False)
+            query = query.filter_by(user_status='deactivated')
     elif approved_filter is not None:
-        is_approved = approved_filter.lower() in ('true', '1', 'yes')
-        query = query.filter_by(is_approved=is_approved)
+        is_approved_val = approved_filter.lower() in ('true', '1', 'yes')
+        if is_approved_val:
+            query = query.filter(User.user_status != 'pending_approval')
+        else:
+            query = query.filter_by(user_status='pending_approval')
 
     # Multi-select filters
     if gender_filter:
@@ -234,13 +474,13 @@ def approve_user(id):
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    user.is_approved = True
+    user.user_status = 'pending_cuff'
     if not user.is_email_verified:
         user.is_email_verified = True
     db.session.commit()
 
     audit_log('UPDATE', 'user', resource_id=str(id),
-              details={'action': 'approve'})
+              details={'action': 'approve', 'new_status': 'pending_cuff'})
 
     return jsonify(user.to_dict(include_phi=True)), 200
 
@@ -257,9 +497,10 @@ def deactivate_user(id):
     if user.is_admin:
         return jsonify({'error': 'Cannot deactivate an admin user'}), 403
 
-    if not user.is_active:
+    if user.user_status == 'deactivated':
         return jsonify({'error': 'User is already deactivated'}), 409
 
+    user.user_status = 'deactivated'
     user.is_active = False
     db.session.commit()
 
@@ -511,8 +752,8 @@ def _evaluate_call_list():
     seven_days_ago = now - timedelta(days=7)
     thirty_days_ago = now - timedelta(days=30)
 
-    # Get all active, approved, non-admin users
-    users = User.query.filter_by(is_active=True, is_approved=True, is_admin=False).all()
+    # Get all active, non-admin users
+    users = User.query.filter(User.user_status == 'active', User.is_admin == False).all()
 
     # Batch-load all readings from last 7 days in 1 query
     recent_readings = (
@@ -1224,11 +1465,11 @@ def bulk_approve_users():
                 results['error'].append({'id': user_id, 'reason': 'User not found'})
                 continue
 
-            if user.is_approved:
-                results['skipped'].append({'id': user_id, 'reason': 'Already approved'})
+            if user.user_status != 'pending_approval':
+                results['skipped'].append({'id': user_id, 'reason': 'Not pending approval'})
                 continue
 
-            user.is_approved = True
+            user.user_status = 'pending_cuff'
             if not user.is_email_verified:
                 user.is_email_verified = True
 
@@ -1302,10 +1543,11 @@ def bulk_deactivate_users():
                 results['skipped'].append({'id': user_id, 'reason': 'Cannot deactivate admin user'})
                 continue
 
-            if not user.is_active:
+            if user.user_status == 'deactivated':
                 results['skipped'].append({'id': user_id, 'reason': 'Already deactivated'})
                 continue
 
+            user.user_status = 'deactivated'
             user.is_active = False
             results['success'].append({'id': user_id})
 
@@ -1357,11 +1599,11 @@ def export_users():
 
     if status_filter:
         if status_filter == 'pending':
-            query = query.filter_by(is_approved=False, is_active=True)
+            query = query.filter_by(user_status='pending_approval')
         elif status_filter == 'approved':
-            query = query.filter_by(is_approved=True, is_active=True)
+            query = query.filter(User.user_status.in_(['active', 'pending_registration', 'pending_cuff', 'pending_first_reading']))
         elif status_filter == 'deactivated':
-            query = query.filter_by(is_active=False)
+            query = query.filter_by(user_status='deactivated')
 
     if gender_filter:
         query = query.filter(User.gender.in_(gender_filter.split(',')))

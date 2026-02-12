@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../theme/app_theme.dart';
@@ -310,11 +311,19 @@ class _PairingScreenState extends State<PairingScreen>
   void _navigateToHome() async {
     await Future.delayed(const Duration(seconds: 1));
     if (mounted) {
+      // Update stored user status since they've paired a device
+      const storage = FlutterSecureStorage();
+      await storage.write(key: 'user_status', value: 'active');
+
       // Update NavigationManager state before navigating
       final navManager = Provider.of<NavigationManager>(context, listen: false);
+      navManager.userStatus = 'active';
       navManager.showMeasurementView();
-      // Pop back to root Consumer instead of pushing HomeScreen on top
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // Navigate to measurement, clearing the entire stack
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/measurement',
+        (route) => false,
+      );
     }
   }
 

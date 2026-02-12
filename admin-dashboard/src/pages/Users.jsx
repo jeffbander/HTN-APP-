@@ -1,37 +1,41 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { fetchApi } from '../api/client'
 import Header from '../components/layout/Header'
 import Badge from '../components/shared/Badge'
 import Pagination from '../components/shared/Pagination'
 import Modal from '../components/shared/Modal'
-import MultiSelectDropdown from '../components/shared/MultiSelectDropdown'
-import DateRangeFilter from '../components/shared/DateRangeFilter'
-import RangeFilter from '../components/shared/RangeFilter'
 import SearchInput from '../components/shared/SearchInput'
 import BulkSelectionBar from '../components/shared/BulkSelectionBar'
 import ExportButton from '../components/shared/ExportButton'
 import styles from './Users.module.css'
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Users' },
-  { value: 'pending', label: 'Pending Approval' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'deactivated', label: 'Deactivated' },
+const TABS = [
+  { key: 'all', label: 'All Users', color: null },
+  { key: 'active', label: 'Active', color: 'green' },
+  { key: 'pending_approval', label: 'Pending Approval', color: 'orange' },
+  { key: 'pending_registration', label: 'Pending Registration', color: 'orange' },
+  { key: 'pending_cuff', label: 'Pending Cuff', color: 'orange' },
+  { key: 'pending_first_reading', label: 'Pending First Reading', color: 'blue' },
+  { key: 'enrollment_only', label: 'Enrollment Only', color: 'gray' },
+  { key: 'deactivated', label: 'Deactivated', color: 'red' },
 ]
 
+const STATUS_DISPLAY = {
+  pending_approval: { label: 'Pending Approval', color: 'orange' },
+  pending_registration: { label: 'Pending Registration', color: 'orange' },
+  pending_cuff: { label: 'Pending Cuff', color: 'orange' },
+  pending_first_reading: { label: 'Pending First Reading', color: 'blue' },
+  active: { label: 'Active', color: 'green' },
+  deactivated: { label: 'Deactivated', color: 'red' },
+  enrollment_only: { label: 'Enrollment Only', color: 'gray' },
+}
+
 const GENDER_OPTIONS = ['Male', 'Female', 'Prefer not to say']
-const RANK_OPTIONS = ['Lieutenant', 'Captain', 'Battalion Chief', 'Firefighter', 'Fire Alarm Dispatcher', 'Deputy Chief', 'Other']
-const WORK_STATUS_OPTIONS = ['Active', 'Retired']
-const CHRONIC_CONDITIONS_OPTIONS = [
-  'Diabetes',
-  'Heart Disease',
-  'Kidney Disease',
-  'Stroke',
-  'High Cholesterol',
-  'Sleep Apnea',
-  'Obesity',
-  'None'
+const HTN_OPTIONS = [
+  { value: '', label: 'All' },
+  { value: 'true', label: 'Yes' },
+  { value: 'false', label: 'No' },
 ]
 
 export default function Users() {
@@ -39,75 +43,71 @@ export default function Users() {
   const [searchParams] = useSearchParams()
   const [users, setUsers] = useState([])
   const [totalCount, setTotalCount] = useState(0)
-  const [stats, setStats] = useState(null)
-  const [status, setStatus] = useState(searchParams.get('status') || 'all')
+  const [tabCounts, setTabCounts] = useState({})
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'all')
   const [search, setSearch] = useState('')
-  const [offset, setOffset] = useState(0)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [modal, setModal] = useState(null)
   const [sortBy, setSortBy] = useState('created_at')
-  const [sortOrder, setSortOrder] = useState('desc')
+  const [sortDir, setSortDir] = useState('desc')
 
-  // Multi-select filter states
-  const [genderFilter, setGenderFilter] = useState([])
-  const [rankFilter, setRankFilter] = useState([])
-  const [workStatusFilter, setWorkStatusFilter] = useState([])
-  const [unionFilter, setUnionFilter] = useState([])
-  const [chronicConditionsFilter, setChronicConditionsFilter] = useState([])
-
-  // Age range filter
-  const [ageMin, setAgeMin] = useState(null)
-  const [ageMax, setAgeMax] = useState(null)
-
-  // Date registered filter
-  const [registeredFrom, setRegisteredFrom] = useState('')
-  const [registeredTo, setRegisteredTo] = useState('')
-
-  // Unions list for filter dropdown
+  // Filters
+  const [genderFilter, setGenderFilter] = useState('')
+  const [unionFilter, setUnionFilter] = useState('')
+  const [htnFilter, setHtnFilter] = useState('')
   const [unions, setUnions] = useState([])
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
 
-  const limit = 15
+  const perPage = 50
 
+  // Load tab counts
+  const loadTabCounts = useCallback(async () => {
+    try {
+      const data = await fetchApi('/admin/users/tab-counts')
+      setTabCounts(data)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Load users for current tab
   const loadUsers = useCallback(async (searchVal) => {
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ limit, offset, sort_by: sortBy, sort_order: sortOrder })
-      if (status !== 'all') params.set('status', status)
+      const params = new URLSearchParams({
+        page,
+        per_page: perPage,
+        sort: sortBy,
+        dir: sortDir,
+      })
       if (searchVal) params.set('search', searchVal)
-      if (genderFilter.length) params.set('gender', genderFilter.join(','))
-      if (rankFilter.length) params.set('rank', rankFilter.join(','))
-      if (workStatusFilter.length) params.set('work_status', workStatusFilter.join(','))
-      if (unionFilter.length) params.set('union_id', unionFilter.join(','))
-      if (ageMin) params.set('age_min', ageMin)
-      if (ageMax) params.set('age_max', ageMax)
-      if (registeredFrom) params.set('registered_from', registeredFrom)
-      if (registeredTo) params.set('registered_to', registeredTo)
+      if (unionFilter) params.set('union_id', unionFilter)
+      if (genderFilter) params.set('gender', genderFilter)
+      if (htnFilter) params.set('has_htn', htnFilter)
 
-      const data = await fetchApi(`/admin/users?${params}`)
-      const list = data.users || data || []
-      setUsers(list)
-      setTotalCount(data.total_count ?? list.length)
+      const data = await fetchApi(`/admin/users/tab/${activeTab}?${params}`)
+      setUsers(data.users || [])
+      setTotalCount(data.total || 0)
     } catch (err) {
       setError(err.message || 'Failed to load users')
       setUsers([])
     } finally {
       setLoading(false)
     }
-  }, [status, offset, sortBy, sortOrder, genderFilter, rankFilter, workStatusFilter, unionFilter, ageMin, ageMax, registeredFrom, registeredTo])
+  }, [activeTab, page, sortBy, sortDir, unionFilter, genderFilter, htnFilter])
 
   useEffect(() => {
     loadUsers(search)
-  }, [status, offset, sortBy, sortOrder, genderFilter, rankFilter, workStatusFilter, unionFilter, ageMin, ageMax, registeredFrom, registeredTo])
+  }, [activeTab, page, sortBy, sortDir, unionFilter, genderFilter, htnFilter])
 
-  // Load stats for the stat cards
   useEffect(() => {
-    fetchApi('/admin/stats').then(setStats).catch(() => {})
+    loadTabCounts()
   }, [])
 
   // Load unions for filter dropdown
@@ -117,39 +117,37 @@ export default function Users() {
     }).catch(() => {})
   }, [])
 
-  // Read URL params on mount
-  useEffect(() => {
-    const urlStatus = searchParams.get('status')
-    if (urlStatus && STATUS_OPTIONS.some((o) => o.value === urlStatus)) {
-      setStatus(urlStatus)
-    }
-  }, [])
+  function handleTabChange(tab) {
+    setActiveTab(tab)
+    setPage(1)
+    setSelectedIds(new Set())
+  }
 
   function handleSearchChange(val) {
     setSearch(val)
-    setOffset(0)
+    setPage(1)
     loadUsers(val)
   }
 
   function handleSort(col) {
     if (sortBy === col) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
     } else {
       setSortBy(col)
-      setSortOrder('asc')
+      setSortDir('asc')
     }
-    setOffset(0)
+    setPage(1)
   }
 
   function sortArrow(col) {
     if (sortBy !== col) return ''
-    return sortOrder === 'asc' ? ' \u25B2' : ' \u25BC'
+    return sortDir === 'asc' ? ' \u25B2' : ' \u25BC'
   }
 
-  function userStatus(u) {
-    if (!u.is_active) return { label: 'Deactivated', color: 'red' }
-    if (!u.is_approved) return { label: 'Pending', color: 'orange' }
-    return { label: 'Approved', color: 'green' }
+  function statusDisplay(u) {
+    const s = STATUS_DISPLAY[u.user_status]
+    if (s) return s
+    return { label: u.user_status || 'Unknown', color: 'gray' }
   }
 
   async function handleApprove(user) {
@@ -157,6 +155,7 @@ export default function Users() {
       await fetchApi(`/admin/users/${user.id}/approve`, { method: 'PUT' })
       setModal(null)
       loadUsers(search)
+      loadTabCounts()
     } catch (err) {
       alert(err.message)
     }
@@ -167,6 +166,7 @@ export default function Users() {
       await fetchApi(`/admin/users/${user.id}/deactivate`, { method: 'PUT' })
       setModal(null)
       loadUsers(search)
+      loadTabCounts()
     } catch (err) {
       alert(err.message)
     }
@@ -202,6 +202,7 @@ export default function Users() {
       alert(`Approved ${result.results.success.length} users. ${result.results.skipped.length} skipped. ${result.results.error.length} errors.`)
       setSelectedIds(new Set())
       loadUsers(search)
+      loadTabCounts()
     } catch (err) {
       alert(err.message)
     } finally {
@@ -220,6 +221,7 @@ export default function Users() {
       alert(`Deactivated ${result.results.success.length} users. ${result.results.skipped.length} skipped. ${result.results.error.length} errors.`)
       setSelectedIds(new Set())
       loadUsers(search)
+      loadTabCounts()
     } catch (err) {
       alert(err.message)
     } finally {
@@ -229,17 +231,12 @@ export default function Users() {
 
   async function handleExport() {
     const params = new URLSearchParams()
-    if (status !== 'all') params.set('status', status)
-    if (genderFilter.length) params.set('gender', genderFilter.join(','))
-    if (rankFilter.length) params.set('rank', rankFilter.join(','))
-    if (workStatusFilter.length) params.set('work_status', workStatusFilter.join(','))
-    if (unionFilter.length) params.set('union_id', unionFilter.join(','))
-    if (ageMin) params.set('age_min', ageMin)
-    if (ageMax) params.set('age_max', ageMax)
-    if (registeredFrom) params.set('registered_from', registeredFrom)
-    if (registeredTo) params.set('registered_to', registeredTo)
+    if (activeTab !== 'all') params.set('status', activeTab)
+    if (genderFilter) params.set('gender', genderFilter)
+    if (unionFilter) params.set('union_id', unionFilter)
+    if (htnFilter) params.set('has_htn', htnFilter)
 
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('htn_admin_token')
     const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/admin/export/users?${params}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -264,105 +261,75 @@ export default function Users() {
     })
   }
 
-  const unionOptions = unions.map(u => ({ value: u.id, label: u.name }))
+  // Convert page-based to offset-based for Pagination component
+  const offset = (page - 1) * perPage
 
   return (
     <>
       <Header title="User Management" />
 
-      {/* Stat cards */}
-      {stats && (
-        <div className={styles.statsRow}>
-          <div className={styles.miniStat}>
-            <div className={styles.miniStatLabel}>Total</div>
-            <div className={styles.miniStatValue}>{stats.total_users}</div>
-          </div>
-          <div className={styles.miniStat}>
-            <div className={styles.miniStatLabel}>Pending</div>
-            <div className={styles.miniStatValue} style={{ color: '#ef6c00' }}>{stats.pending_approvals}</div>
-          </div>
-          <div className={styles.miniStat}>
-            <div className={styles.miniStatLabel}>Approved</div>
-            <div className={styles.miniStatValue} style={{ color: '#2e7d32' }}>{stats.approved_users}</div>
-          </div>
-          <div className={styles.miniStat}>
-            <div className={styles.miniStatLabel}>Deactivated</div>
-            <div className={styles.miniStatValue} style={{ color: '#c62828' }}>{stats.deactivated_users}</div>
-          </div>
-        </div>
-      )}
-
-      <div className={styles.toolbar}>
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Status:</span>
-          <select
-            value={status}
-            onChange={(e) => { setStatus(e.target.value); setOffset(0) }}
-            className={styles.select}
+      {/* Tab bar */}
+      <div className={styles.tabBar}>
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            className={`${styles.tab} ${activeTab === tab.key ? styles.tabActive : ''}`}
+            onClick={() => handleTabChange(tab.key)}
           >
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <MultiSelectDropdown
-          label="Gender"
-          options={GENDER_OPTIONS}
-          selected={genderFilter}
-          onChange={(v) => { setGenderFilter(v); setOffset(0) }}
-        />
-        <MultiSelectDropdown
-          label="Rank"
-          options={RANK_OPTIONS}
-          selected={rankFilter}
-          onChange={(v) => { setRankFilter(v); setOffset(0) }}
-        />
-        <MultiSelectDropdown
-          label="Work Status"
-          options={WORK_STATUS_OPTIONS}
-          selected={workStatusFilter}
-          onChange={(v) => { setWorkStatusFilter(v); setOffset(0) }}
-        />
-        {unionOptions.length > 0 && (
-          <MultiSelectDropdown
-            label="Union"
-            options={unionOptions}
-            selected={unionFilter}
-            onChange={(v) => { setUnionFilter(v); setOffset(0) }}
-          />
-        )}
-        <MultiSelectDropdown
-          label="Conditions"
-          options={CHRONIC_CONDITIONS_OPTIONS}
-          selected={chronicConditionsFilter}
-          onChange={(v) => { setChronicConditionsFilter(v); setOffset(0) }}
-        />
-        <RangeFilter
-          label="Age"
-          minValue={ageMin}
-          maxValue={ageMax}
-          onChange={(min, max) => { setAgeMin(min); setAgeMax(max); setOffset(0) }}
-          minPlaceholder="18"
-          maxPlaceholder="100"
-          unit="yrs"
-        />
-        <DateRangeFilter
-          label="Registered"
-          fromDate={registeredFrom}
-          toDate={registeredTo}
-          onChange={(from, to) => { setRegisteredFrom(from); setRegisteredTo(to); setOffset(0) }}
-        />
+            <span className={styles.tabLabel}>{tab.label}</span>
+            {tabCounts[tab.key] != null && (
+              <span className={`${styles.tabBadge} ${styles[`badge_${tab.color}`] || ''}`}>
+                {tabCounts[tab.key]}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
+      {/* Filters toolbar */}
       <div className={styles.toolbar}>
         <SearchInput
           value={search}
           onChange={handleSearchChange}
           placeholder="Search by name or email..."
         />
+
+        <div className={styles.filterGroup}>
+          <select
+            value={unionFilter}
+            onChange={(e) => { setUnionFilter(e.target.value); setPage(1) }}
+            className={styles.select}
+          >
+            <option value="">All Unions</option>
+            {unions.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={genderFilter}
+            onChange={(e) => { setGenderFilter(e.target.value); setPage(1) }}
+            className={styles.select}
+          >
+            <option value="">All Genders</option>
+            {GENDER_OPTIONS.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+
+          <select
+            value={htnFilter}
+            onChange={(e) => { setHtnFilter(e.target.value); setPage(1) }}
+            className={styles.select}
+          >
+            <option value="">Has HTN: All</option>
+            <option value="true">Has HTN: Yes</option>
+            <option value="false">Has HTN: No</option>
+          </select>
+        </div>
+
         <span className={styles.resultCount}>
-          Showing {users.length} of {totalCount} users
+          {totalCount} user{totalCount !== 1 ? 's' : ''}
         </span>
         <ExportButton onClick={handleExport} label="Export CSV" />
       </div>
@@ -389,28 +356,22 @@ export default function Users() {
                       onChange={(e) => e.target.checked ? selectAll() : deselectAll()}
                     />
                   </th>
-                  <th className={styles.sortableHeader} onClick={() => handleSort('id')}>
-                    ID{sortArrow('id')}
+                  <th className={styles.sortableHeader} onClick={() => handleSort('created_at')}>
+                    Name{sortArrow('created_at')}
                   </th>
-                  <th>Name</th>
                   <th>Email</th>
-                  <th>Union</th>
-                  <th className={styles.sortableHeader} onClick={() => handleSort('gender')}>
-                    Gender{sortArrow('gender')}
-                  </th>
-                  <th className={styles.sortableHeader} onClick={() => handleSort('rank')}>
-                    Rank{sortArrow('rank')}
+                  <th className={styles.sortableHeader} onClick={() => handleSort('union_id')}>
+                    Union{sortArrow('union_id')}
                   </th>
                   <th>Status</th>
-                  <th className={styles.sortableHeader} onClick={() => handleSort('created_at')}>
-                    Registered{sortArrow('created_at')}
-                  </th>
+                  <th>Last Reading</th>
+                  <th>Readings</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => {
-                  const st = userStatus(u)
+                  const st = statusDisplay(u)
                   return (
                     <tr key={u.id} className={styles.clickableRow} onClick={() => navigate(`/users/${u.id}`)}>
                       <td onClick={(e) => e.stopPropagation()}>
@@ -420,24 +381,22 @@ export default function Users() {
                           onChange={() => toggleSelect(u.id)}
                         />
                       </td>
-                      <td>{u.id}</td>
                       <td>
                         <Link to={`/users/${u.id}`} className={styles.nameLink} onClick={(e) => e.stopPropagation()}>
                           {u.name || '\u2014'}
                         </Link>
                       </td>
                       <td>{u.email || '\u2014'}</td>
-                      <td>{u.union_name || `Union #${u.union_id || '\u2014'}`}</td>
-                      <td>{u.gender || '\u2014'}</td>
-                      <td>{u.rank || '\u2014'}</td>
+                      <td>{u.union_name || '\u2014'}</td>
                       <td><Badge color={st.color}>{st.label}</Badge></td>
-                      <td>{formatDate(u.created_at)}</td>
+                      <td>{formatDate(u.last_reading_date)}</td>
+                      <td>{u.reading_count || 0}</td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        {!u.is_active ? (
+                        {u.user_status === 'deactivated' ? (
                           <button className={`${styles.actionBtn} ${styles.btnDisabled}`} disabled>
                             Deactivated
                           </button>
-                        ) : !u.is_approved ? (
+                        ) : u.user_status === 'pending_approval' ? (
                           <button
                             className={`${styles.actionBtn} ${styles.btnApprove}`}
                             onClick={() => setModal({ type: 'approve', user: u })}
@@ -458,14 +417,19 @@ export default function Users() {
                 })}
                 {users.length === 0 && !error && (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', color: '#999', padding: 32 }}>
+                    <td colSpan={8} style={{ textAlign: 'center', color: '#999', padding: 32 }}>
                       No users found
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-            <Pagination offset={offset} limit={limit} total={totalCount} onChange={setOffset} />
+            <Pagination
+              offset={offset}
+              limit={perPage}
+              total={totalCount}
+              onChange={(newOffset) => setPage(Math.floor(newOffset / perPage) + 1)}
+            />
           </>
         )}
       </div>
@@ -477,8 +441,8 @@ export default function Users() {
         onDeselectAll={deselectAll}
         loading={bulkLoading}
         actions={[
-          { label: 'Approve Selected', onClick: handleBulkApprove, icon: '✓' },
-          { label: 'Deactivate Selected', onClick: handleBulkDeactivate, variant: 'danger', icon: '✕' },
+          { label: 'Approve Selected', onClick: handleBulkApprove, icon: '\u2713' },
+          { label: 'Deactivate Selected', onClick: handleBulkDeactivate, variant: 'danger', icon: '\u2715' },
         ]}
       />
 
@@ -492,7 +456,7 @@ export default function Users() {
       >
         <p>
           Are you sure you want to approve <strong>{modal?.user?.name}</strong> ({modal?.user?.email})?
-          They will be able to log in and submit blood pressure readings.
+          They will be moved to Pending Registration status.
         </p>
       </Modal>
 

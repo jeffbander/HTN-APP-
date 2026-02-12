@@ -6,6 +6,7 @@ import '../widgets/gradient_header.dart';
 import '../widgets/app_card.dart';
 import '../widgets/primary_button.dart';
 import '../flaskRegUsr.dart';
+import '../utils/status_router.dart';
 
 class CuffRequestPendingScreen extends StatefulWidget {
   final String? address;
@@ -52,10 +53,11 @@ class _CuffRequestPendingScreenState extends State<CuffRequestPendingScreen> {
       final result = await _flaskRegUsr.getCuffRequestStatus(token);
 
       if (result['status'] == 200 && mounted) {
+        final request = result['request'] as Map<String, dynamic>?;
         setState(() {
-          _status = result['request_status'] ?? 'pending';
-          _trackingNumber = result['tracking_number'];
-          _address = result['address'] ?? _address;
+          _status = request?['status'] ?? result['request_status'] ?? 'pending';
+          _trackingNumber = request?['tracking_number'] ?? result['tracking_number'];
+          _address = request?['shipping_address'] ?? result['address'] ?? _address;
           _isLoading = false;
         });
       } else if (mounted) {
@@ -339,20 +341,23 @@ class _CuffRequestPendingScreenState extends State<CuffRequestPendingScreen> {
                     ),
                   ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(AppTheme.spacingMd),
-              child: PrimaryButton(
-                label: _status == 'received' || _status == 'shipped' ? 'Pair My Cuff' : 'Done',
-                variant: ButtonVariant.navy,
-                onPressed: () {
-                  // Navigate to pairing screen so user can pair their cuff when it arrives
-                  Navigator.of(context).pushReplacementNamed('/pairing');
-                },
+          if (_status == 'delivered' || _status == 'received')
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(AppTheme.spacingMd),
+                child: PrimaryButton(
+                  label: 'Start Taking Readings',
+                  variant: ButtonVariant.navy,
+                  onPressed: () {
+                    // Cuff received — route to measurement (pending_first_reading)
+                    Navigator.of(context).pushReplacementNamed(
+                      StatusRouter.routeForStatus('pending_first_reading'),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

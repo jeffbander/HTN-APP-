@@ -7,6 +7,8 @@ import '../widgets/gradient_header.dart';
 import '../widgets/app_card.dart';
 import '../widgets/primary_button.dart';
 import '../flaskRegUsr.dart';
+import '../services/dev_mode_service.dart';
+import '../utils/status_router.dart';
 
 class PendingApprovalScreen extends StatefulWidget {
   const PendingApprovalScreen({super.key});
@@ -52,15 +54,18 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
       if (token == null) return;
 
       final profile = await _api.getProfile(token);
-      if (profile != null && profile['is_approved'] == true && mounted) {
-        setState(() {
-          _isApproved = true;
-        });
-        _pollTimer?.cancel();
-        // Navigate to approved screen after short delay
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/device-selection');
+      if (profile != null && mounted) {
+        final userStatus = profile['user_status'] as String? ?? 'pending_approval';
+        if (userStatus != 'pending_approval') {
+          setState(() {
+            _isApproved = true;
+          });
+          _pollTimer?.cancel();
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            final route = StatusRouter.routeForStatus(userStatus);
+            Navigator.of(context).pushReplacementNamed(route);
+          }
         }
       }
     } catch (e) {
@@ -283,20 +288,21 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
               ),
             ),
           ),
-          // Testing button to skip approval
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(AppTheme.spacingMd),
-              child: PrimaryButton(
-                label: 'Continue (Skip for Testing)',
-                variant: ButtonVariant.navy,
-                onPressed: () {
-                  Navigator.of(context).pushReplacementNamed('/device-selection');
-                },
+          // Testing button to skip approval (dev mode only)
+          if (DevModeService.instance.isDevMode)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(AppTheme.spacingMd),
+                child: PrimaryButton(
+                  label: 'Continue (Skip for Testing)',
+                  variant: ButtonVariant.navy,
+                  onPressed: () {
+                    Navigator.of(context).pushReplacementNamed('/device-selection');
+                  },
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

@@ -9,6 +9,16 @@ from app.utils.encryption import encrypt_phi, decrypt_phi, hash_email
 
 logger = logging.getLogger(__name__)
 
+USER_STATUS_CHOICES = [
+    'pending_approval',       # Signed up in Flutter, waiting for union approval
+    'pending_registration',   # Union approved, hasn't requested cuff yet
+    'pending_cuff',           # Cuff requested, waiting for delivery
+    'pending_first_reading',  # Cuff delivered, waiting for first BP reading
+    'active',                 # Has at least one BP reading
+    'deactivated',            # No reading in 8+ months (auto) or admin manual
+    'enrollment_only',        # MS Forms registrant, never used the app
+]
+
 
 class User(db.Model):
     """
@@ -51,10 +61,14 @@ class User(db.Model):
     loneliness = db.Column(db.String(50), nullable=True)
     sleep_quality = db.Column(db.Integer, nullable=True)
 
+    # Screening fields
+    phq2_interest = db.Column(db.String(50), nullable=True)
+    phq2_depressed = db.Column(db.String(50), nullable=True)
+
     # Non-PHI fields
     union_id = db.Column(db.Integer, db.ForeignKey('unions.id'), nullable=True)
+    user_status = db.Column(db.String(30), nullable=False, default='pending_approval', index=True)
     is_active = db.Column(db.Boolean, default=True)
-    is_approved = db.Column(db.Boolean, default=False)
     is_admin = db.Column(db.Boolean, default=False)
     is_email_verified = db.Column(db.Boolean, default=False)
     is_mfa_enabled = db.Column(db.Boolean, default=False)
@@ -63,7 +77,8 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    readings = db.relationship('BloodPressureReading', backref='user', lazy='dynamic')
+    readings = db.relationship('BloodPressureReading', backref='user', lazy='dynamic',
+                                order_by='BloodPressureReading.reading_date.desc()')
     union = db.relationship('Union', backref='users')
 
     # PHI property: name
@@ -121,6 +136,11 @@ class User(db.Model):
     def medications(self, value: str):
         self._medications_encrypted = encrypt_phi(value) if value else None
 
+    @property
+    def is_approved(self):
+        """Backward compatibility for Flutter app — True if past the approval stage."""
+        return self.user_status not in ('pending_approval', None)
+
     def to_dict(self, include_phi=False):
         """Convert to dictionary. Only include PHI if explicitly requested.
         Wraps PHI decryption in try/except so one bad record doesn't crash the list."""
@@ -129,6 +149,7 @@ class User(db.Model):
             'union_id': self.union_id,
             'union_name': self.union.name if self.union else None,
             'is_active': self.is_active,
+            'user_status': self.user_status,
             'is_approved': self.is_approved,
             'is_email_verified': self.is_email_verified,
             'is_flagged': self.is_flagged,
@@ -153,6 +174,9 @@ class User(db.Model):
             'stress_level': self.stress_level,
             'loneliness': self.loneliness,
             'sleep_quality': self.sleep_quality,
+            # Screening fields
+            'phq2_interest': self.phq2_interest,
+            'phq2_depressed': self.phq2_depressed,
         }
         if include_phi:
             # Wrap each PHI field individually so one decryption failure

@@ -6,6 +6,7 @@ import 'env.dart';
 import 'theme/app_theme.dart';
 import 'services/sync_service.dart';
 import 'services/notification_service.dart';
+import 'services/local_notification_service.dart';
 import 'registration/registration_wizard.dart';
 import 'registration/pending_approval_screen.dart';
 import 'registration/approved_screen.dart';
@@ -18,6 +19,8 @@ import 'login_screen.dart';
 import 'mfa_verify_screen.dart';
 import 'profile_screen.dart';
 import 'home_screen.dart';
+import 'deactivated_screen.dart';
+import 'services/dev_mode_service.dart';
 import 'helpView.dart';
 import 'reminders_screen.dart';
 import 'education_screen.dart';
@@ -34,12 +37,23 @@ void main() async {
   // Initialize sync service for offline queue
   await SyncService.instance.initialize();
 
+  // Initialize dev mode service
+  await DevModeService.instance.initialize();
+
   // Initialize notification service (stub until Firebase is configured)
   try {
     await NotificationService.instance.initialize();
     print("NotificationService initialized");
   } catch (e) {
     print("NotificationService initialization failed: $e");
+  }
+
+  // Initialize local notification service for reminders
+  try {
+    await LocalNotificationService.instance.initialize();
+    print("LocalNotificationService initialized");
+  } catch (e) {
+    print("LocalNotificationService initialization failed: $e");
   }
 
   final sourceManager = SourceManager.shared;
@@ -108,6 +122,7 @@ class MyApp extends StatelessWidget {
         '/reminders': (context) => const RemindersScreen(),
         '/education': (context) => const EducationScreen(),
         '/device-info': (context) => const DeviceInfoView(),
+        '/deactivated': (context) => const DeactivatedScreen(),
       },
       onGenerateRoute: (settings) {
         // Handle routes with arguments
