@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'googleSheetsUserManager.dart';
 import 'sourceManager.dart';
@@ -18,9 +19,9 @@ class NoCuffView extends StatelessWidget
 
       // Append user data to Google Sheets using GoogleSheetsUserManager
       await GoogleSheetsUserManager ().appendUserDataToGoogleSheets (concatenatedData);
-      print("User data successfully sent to Google Sheets.");
+      dev.log("User data successfully sent to Google Sheets.");
     } catch (e) {
-      print("Failed to send user data to Google Sheets: $e");
+      dev.log("Failed to send user data to Google Sheets: $e");
     }
   }
 

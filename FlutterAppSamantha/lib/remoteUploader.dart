@@ -29,26 +29,26 @@ class RemoteUploader {
     List<Map<DateTime, List<dynamic>>> bloodPressureData,
   ) async {
     final client = _httpClient;
-    print("[Remote] sendDataToBackend started...");
+    dev.log("[Remote] sendDataToBackend started...");
 
     try {
-      print("[Remote] User info: $userInfo");
-      print("[Remote] Device ID: $deviceId");
-      print("[Remote] Data count: ${bloodPressureData.length}");
+      dev.log("[Remote] [user info redacted]");
+      dev.log("[Remote] Device ID: $deviceId");
+      dev.log("[Remote] Data count: ${bloodPressureData.length}");
 
       final parts = userInfo.split(',');
       if (parts.length < 2) {
-        print("[Remote] Invalid userInfo format: $userInfo");
+        dev.log("[Remote] Invalid userInfo format: [redacted]");
         return;
       }
       final email = parts[1].trim();
 
       for (var i = 0; i < bloodPressureData.length; i++) {
-        print("[Remote] Sending reading ${i + 1}/${bloodPressureData.length}");
+        dev.log("[Remote] Sending reading ${i + 1}/${bloodPressureData.length}");
 
         // ---- Step 1: Get a single-use token ----
         final loginPayload = jsonEncode({"email": email});
-        print("[Remote] [Login Request] $loginPayload");
+        dev.log("[Remote] [Login Request] [payload redacted]");
 
         http.Response loginResp;
         try {
@@ -61,27 +61,27 @@ class RemoteUploader {
                 body: loginPayload,
               )
               .timeout(const Duration(seconds: 8));
-          print("[Remote] Login request took ${stopwatch.elapsedMilliseconds} ms");
+          dev.log("[Remote] Login request took ${stopwatch.elapsedMilliseconds} ms");
         } on SocketException catch (e) {
-          print("[Remote] Network error during login: $e");
+          dev.log("[Remote] Network error during login: $e");
           continue;
         } on TimeoutException {
-          print("[Remote] Login request timed out!");
+          dev.log("[Remote] Login request timed out!");
           continue;
         } catch (e, st) {
-          print("[Remote] Unexpected login error: $e\n$st");
+          dev.log("[Remote] Unexpected login error: $e\n$st");
           continue;
         }
 
         if (loginResp.statusCode != 200) {
-          print("[Remote] Login failed (${loginResp.statusCode}): ${loginResp.body}");
+          dev.log("[Remote] Login failed: status ${loginResp.statusCode}");
           continue;
         }
 
         final loginData = jsonDecode(loginResp.body);
         final token = loginData['singleUseToken'];
         if (token == null) {
-          print("[Remote] Missing singleUseToken in response: $loginData");
+          dev.log("[Remote] Missing singleUseToken in response");
           continue;
         }
 
@@ -100,7 +100,7 @@ class RemoteUploader {
           "heartRate": heartRate,
           "readingDate": date,
         };
-        print("[Remote] [Reading Request] $readingPayload");
+        dev.log("[Remote] [Reading Request] sending reading...");
 
         try {
           final readingUri = Uri.parse("$baseUrl/readings");
@@ -115,28 +115,28 @@ class RemoteUploader {
                 body: jsonEncode(readingPayload),
               )
               .timeout(const Duration(seconds: 8));
-          print("[Remote] Reading upload took ${stopwatch.elapsedMilliseconds} ms");
+          dev.log("[Remote] Reading upload took ${stopwatch.elapsedMilliseconds} ms");
 
           if (resp.statusCode == 200) {
-            print("[Remote] Reading ${i + 1} uploaded successfully!");
+            dev.log("[Remote] Reading ${i + 1} uploaded successfully!");
           } else {
-            print("[Remote] Upload failed (${resp.statusCode}): ${resp.body}");
+            dev.log("[Remote] Upload failed: status ${resp.statusCode}");
           }
         } on SocketException catch (e) {
-          print("[Remote] Network error during reading upload: $e");
+          dev.log("[Remote] Network error during reading upload: $e");
         } on TimeoutException {
-          print("[Remote] Reading upload timed out!");
+          dev.log("[Remote] Reading upload timed out!");
         } catch (e, st) {
-          print("[Remote] Unexpected reading upload error: $e\n$st");
+          dev.log("[Remote] Unexpected reading upload error: $e\n$st");
         }
       }
 
-      print("[Remote] All readings processed for $email");
+      dev.log("[Remote] All readings processed for [email redacted]");
     } catch (e, stack) {
-      print("[Remote] Fatal error in sendDataToBackend: $e\n$stack");
+      dev.log("[Remote] Fatal error in sendDataToBackend: $e\n$stack");
     } finally {
       client.close();
-      print("[Remote] HTTP client closed");
+      dev.log("[Remote] HTTP client closed");
     }
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:developer'; // For logging
+import 'dart:developer' as dev; // For logging
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'msg.dart' as msglib;
@@ -40,7 +40,7 @@ class BluetoothManager
 
     BluetoothManager (this.messenger) 
     {
-        log('BluetoothManager initialized');
+        dev.log('BluetoothManager initialized');
 
         pairingManager  = PairingManager(messenger: messenger);
         measurementManager = MeasurementManager(messenger: messenger);
@@ -87,28 +87,28 @@ class BluetoothManager
 
     void onBluetoothStateChanged (BluetoothAdapterState state) 
     {
-        log ('Bluetooth state changed: $state');
+        dev.log('Bluetooth state changed: $state');
 
         switch (state) 
         {
             case BluetoothAdapterState.on:
-                log('Bluetooth is powered on.');
+                dev.log('Bluetooth is powered on.');
                 break;
 
             case BluetoothAdapterState.off:
-                log('Bluetooth is powered off.');
+                dev.log('Bluetooth is powered off.');
                 break;
 
             case BluetoothAdapterState.unavailable:
-                log('Bluetooth is unsupported on this device.');
+                dev.log('Bluetooth is unsupported on this device.');
                 break;
 
             case BluetoothAdapterState.unauthorized:
-                log('Bluetooth is unauthorized.');
+                dev.log('Bluetooth is unauthorized.');
                 break;
 
             default:
-                log('Unknown Bluetooth state: $state');
+                dev.log('Unknown Bluetooth state: $state');
         }
     }
 
@@ -116,7 +116,7 @@ class BluetoothManager
     {
       try 
       {
-          log('Requesting permissions...');
+          dev.log('Requesting permissions...');
           final Map<Permission, PermissionStatus> statuses = await
           [
               Permission.bluetoothScan,
@@ -124,34 +124,34 @@ class BluetoothManager
               Permission.location,
           ].request();
 
-          log('Permissions requested: $statuses');
+          dev.log('Permissions requested: $statuses');
 
           statuses.forEach((permission, status)
           {
-              log('Permission: $permission, Status: ${status.isGranted}');
+              dev.log('Permission: $permission, Status: ${status.isGranted}');
           });
 
           final permissionsGranted = statuses.values.every((status) => status.isGranted);
 
           if (!permissionsGranted) 
           {
-              log('Permissions not granted for scanning', level: 1000);
+              dev.log('Permissions not granted for scanning', level: 1000);
               return;
           }
 
-          log('Permissions granted.');
+          dev.log('Permissions granted.');
 
       } 
       catch (e) 
       {
-          log('Error in startScan: $e', level: 1000);
+          dev.log('Error in startScan: $e', level: 1000);
           rethrow;
       }
     }
 
     Future<void> startScan () async
     {
-      print('🔵 BT: === STARTING BLUETOOTH SCAN ===');
+      dev.log('BT: === STARTING BLUETOOTH SCAN ===');
       final completer = Completer<void>();
 
       try
@@ -161,32 +161,32 @@ class BluetoothManager
 
         // Check Bluetooth adapter state
         final adapterState = await FlutterBluePlus.adapterState.first;
-        print('🔵 BT: Bluetooth adapter state: $adapterState');
+        dev.log('BT: Bluetooth adapter state: $adapterState');
         if (adapterState != BluetoothAdapterState.on) {
-          print('🔵 BT: ERROR - Bluetooth is not ON (state: $adapterState)');
+          dev.log('BT: ERROR - Bluetooth is not ON (state: $adapterState)');
         }
 
         // Check permissions
         await checkPermissions();
-        print('🔵 BT: Permissions checked');
+        dev.log('BT: Permissions checked');
 
-        print('🔵 BT: Starting FlutterBluePlus scan (no service filter, 15s timeout)...');
+        dev.log('BT: Starting FlutterBluePlus scan (no service filter, 15s timeout)...');
 
         // Start scanning — do NOT filter by service UUID because many Omron
         // devices (BP7250 / 5 Series) don't advertise the Blood Pressure
         // Service UUID in their advertisement packets.
         await FlutterBluePlus.startScan(timeout: Duration(seconds: 15));
-        print('🔵 BT: Scan started successfully, listening for results...');
+        dev.log('BT: Scan started successfully, listening for results...');
 
         scanSubscription = FlutterBluePlus.scanResults.listen(
           (results) async
           {
-            print('🔵 BT: Scan callback: ${results.length} result(s)');
+            dev.log('BT: Scan callback: ${results.length} result(s)');
             await handleScanResults(results, completer);
           },
           onDone: () async
           {
-            print('🔵 BT: Scan stream onDone fired.');
+            dev.log('BT: Scan stream onDone fired.');
             if (!completer.isCompleted)
             {
               await finalizeScan(completer);
@@ -194,7 +194,7 @@ class BluetoothManager
           },
           onError: (error)
           {
-            print('🔵 BT: Scan stream error: $error');
+            dev.log('BT: Scan stream error: $error');
             if (!completer.isCompleted) completer.completeError(error);
           },
         );
@@ -204,12 +204,12 @@ class BluetoothManager
       }
       catch (e)
       {
-        print('🔵 BT: Error in startScan: $e');
+        dev.log('BT: Error in startScan: $e');
         if (!completer.isCompleted) completer.completeError(e);
       }
       finally {
         await FlutterBluePlus.stopScan();
-        print('🔵 BT: === SCAN FINISHED ===');
+        dev.log('BT: === SCAN FINISHED ===');
       }
     }
 
@@ -220,13 +220,12 @@ class BluetoothManager
         final deviceName = result.device.platformName;
         final advName = result.advertisementData.advName;
         final serviceUuids = result.advertisementData.serviceUuids;
-        print('🔵 BT: Device found: name="$deviceName" advName="$advName" '
-            'id=${result.device.remoteId} rssi=${result.rssi} '
-            'services=$serviceUuids');
+        dev.log('BT: Device found: name="$deviceName" advName="$advName" '
+            'rssi=${result.rssi} services=$serviceUuids');
 
         // Skip devices with no name — these are unknown random BLE devices
         if (deviceName.isEmpty && advName.isEmpty) {
-          print('🔵 BT: Skipping unnamed device: ${result.device.remoteId}');
+          dev.log('BT: Skipping unnamed device');
           continue;
         }
 
@@ -247,11 +246,11 @@ class BluetoothManager
                               upperAdvName.contains('HEM7');
 
         if (!isOmronDevice) {
-          print('🔵 BT: Skipping non-Omron device: $deviceName');
+          dev.log('BT: Skipping non-Omron device: $deviceName');
           continue;
         }
 
-        print('🔵 BT: ✅ MATCHED Omron device: name="$deviceName" advName="$advName" id=${result.device.remoteId}');
+        dev.log('BT: MATCHED Omron device: name="$deviceName" advName="$advName"');
 
         final peripheral = result.device;
         // Use platform name if available, otherwise use remote ID
@@ -282,11 +281,11 @@ class BluetoothManager
     {
       try
       {
-        log('Finalizing scan...');
+        dev.log('Finalizing scan...');
 
         // If no device was found during the scan, send a failure message
         if (theSource == null) {
-          log('No device found during scan', level: 1000);
+          dev.log('No device found during scan', level: 1000);
           await messenger.sendMsg(msglib.Msg(
             deviceType: msglib.DeviceType.Phone,
             taskType: msglib.TaskType.Scan,
@@ -300,7 +299,7 @@ class BluetoothManager
       }
       catch (e)
       {
-        log('Error during finalization: $e', level: 1000);
+        dev.log('Error during finalization: $e', level: 1000);
         if (!completer.isCompleted) completer.completeError(e);
       }
     }
@@ -308,7 +307,7 @@ class BluetoothManager
 
     Future<void> stopScan() async 
     {
-        log('Stopping Bluetooth scan...');
+        dev.log('Stopping Bluetooth scan...');
         await scanSubscription?.cancel();
     }
 
@@ -320,16 +319,16 @@ class BluetoothManager
 
     Future<void> connectForMeasurement(BluetoothDevice device) async
     {
-       log('Clearing previous measurements...');
+       dev.log('Clearing previous measurements...');
       clearMeasurements();
 
-      log('Starting connection to device...');
+      dev.log('Starting connection to device...');
       await measurementManager.connectToDevice(device);
     }
 
     void dispose() 
     {
-        log('Disposing BluetoothManager');
+        dev.log('Disposing BluetoothManager');
         stopScan();
         pairingManager.dispose();
         measurementManager.dispose();
@@ -346,37 +345,37 @@ class PairingManager
     {
         try
         {
-            print('🔗 PAIR: Starting pairing for ${device.remoteId}');
-            log ('Starting pairing process for ${device.remoteId.toString()}');
+            dev.log('PAIR: Starting pairing...');
+            dev.log('Starting pairing process...');
 
             await device.connect(autoConnect: false, timeout: Duration(seconds: 15));
-            print('🔗 PAIR: Connected to ${device.remoteId}');
-            log('Connected to ${device.remoteId.toString()}');
+            dev.log('PAIR: Connected to device');
+            dev.log('Connected to device');
 
             // On Android, explicitly request bonding.
             // On iOS, bonding happens automatically when accessing encrypted characteristics.
             if (Platform.isAndroid) {
-                log('Android: Requesting BLE bond...');
+                dev.log('Android: Requesting BLE bond...');
                 try {
                     await device.createBond();
-                    log('Bond created for ${device.remoteId.toString()}');
+                    dev.log('Bond created for device');
                 } catch (e) {
-                    log('createBond failed (may already be bonded): $e', level: 900);
+                    dev.log('createBond failed (may already be bonded): $e', level: 900);
                 }
             } else {
-                print('🔗 PAIR: iOS - bond via characteristic access');
-                log('iOS: Bond will be triggered automatically by characteristic access');
+                dev.log('PAIR: iOS - bond via characteristic access');
+                dev.log('iOS: Bond will be triggered automatically by characteristic access');
             }
 
             // Discover services to verify BP service exists
             List<BluetoothService> services = await device.discoverServices();
-            print('🔗 PAIR: Discovered ${services.length} services');
-            log('Discovered ${services.length} services');
+            dev.log('PAIR: Discovered ${services.length} services');
+            dev.log('Discovered ${services.length} services');
 
             bool foundBpService = false;
             for (BluetoothService service in services)
             {
-                log('Service: ${service.uuid}');
+                dev.log('Service: ${service.uuid}');
                 if (service.uuid == BluetoothManager.bloodPressureServiceUUID)
                 {
                     foundBpService = true;
@@ -385,13 +384,13 @@ class PairingManager
             }
 
             if (!foundBpService) {
-                print('🔗 PAIR: WARNING - BP service not found!');
-                log('WARNING: Blood Pressure Service (0x1810) not found on device. '
+                dev.log('PAIR: WARNING - BP service not found!');
+                dev.log('WARNING: Blood Pressure Service (0x1810) not found on device. '
                     'Found services: ${services.map((s) => s.uuid).toList()}', level: 900);
             }
 
-            print('🔗 PAIR: SUCCESS for ${device.remoteId}');
-            log('Pairing successful for ${device.remoteId.toString()}');
+            dev.log('PAIR: SUCCESS');
+            dev.log('Pairing successful');
             await messenger.sendMsg (msglib.Msg (deviceType: msglib.DeviceType.Phone,
                                           taskType:   msglib.TaskType.Pair,
                                           status:     msglib.Status.succeeded,
@@ -400,8 +399,8 @@ class PairingManager
         }
         catch (e)
         {
-            print('🔗 PAIR: FAILED for ${device.remoteId}: $e');
-            log('Pairing failed for ${device.remoteId.toString()}: $e', level: 1000);
+            dev.log('PAIR: FAILED: $e');
+            dev.log('Pairing failed: $e', level: 1000);
             try { await device.disconnect(); } catch (_) {}
             await messenger.sendMsg (msglib.Msg (deviceType: msglib.DeviceType.Phone,
                                           taskType:   msglib.TaskType.Pair,
@@ -413,21 +412,21 @@ class PairingManager
     Future<void> handlePairingCharacteristicDiscovery(BluetoothService service) async
     {
       for (BluetoothCharacteristic characteristic in service.characteristics) {
-        log('  Characteristic: ${characteristic.uuid} '
+        dev.log('  Characteristic: ${characteristic.uuid} '
             'props: ${characteristic.properties}');
 
         // Enable indications for blood pressure measurement characteristic
         // This verifies the device supports BP measurement and that bonding works
         if (characteristic.uuid == BluetoothManager.bloodPressureCharacteristicUUID) {
-          log('Enabling indications for blood pressure characteristic');
+          dev.log('Enabling indications for blood pressure characteristic');
           try {
             await characteristic.setNotifyValue(true);
-            log('Indications enabled — waiting 3 seconds for device to settle...');
+            dev.log('Indications enabled — waiting 3 seconds for device to settle...');
             await Future.delayed(const Duration(seconds: 3));
             await characteristic.setNotifyValue(false);
-            log('Indications disabled after verification');
+            dev.log('Indications disabled after verification');
           } catch (e) {
-            log('Error enabling indications: $e', level: 900);
+            dev.log('Error enabling indications: $e', level: 900);
           }
         }
       }
@@ -435,7 +434,7 @@ class PairingManager
     
     void dispose() 
     {
-        log('Disposing PairingManager');
+        dev.log('Disposing PairingManager');
     }
 }
 
@@ -452,24 +451,24 @@ class MeasurementManager
 
   Future<void> connectToDevice (BluetoothDevice device) async
   {
-      log ('Starting connection attempts for device: ${device.remoteId.toString()}');
+      dev.log('Starting connection attempts for device...');
 
       // Monitor the connection state
       device.connectionState.listen ((state)
       {
           if (prevState != state)
           {
-            log ("Connection state changed from: ${prevState.toString()} to ${state.toString()}");
+            dev.log("Connection state changed from: ${prevState.toString()} to ${state.toString()}");
           }
           else
           {
-            log ("Connection state unchanged from: ${prevState.toString()}");
+            dev.log("Connection state unchanged from: ${prevState.toString()}");
           }
 
           if (prevState != BluetoothConnectionState.disconnected &&
               state == BluetoothConnectionState.disconnected)
           {
-              log ('Device ${device.remoteId.toString()} disconnected.');
+              dev.log('Device disconnected.');
               sendDisconnectionMsg (device); // Send message on disconnect
           }
 
@@ -480,13 +479,13 @@ class MeasurementManager
       // Without this, connecting to a device that was off may fail with a
       // stale cache even though the device is now advertising.
       try {
-        log('Starting 5-second BLE scan to refresh cache before connect...');
+        dev.log('Starting 5-second BLE scan to refresh cache before connect...');
         await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
         await Future.delayed(const Duration(seconds: 5));
         await FlutterBluePlus.stopScan();
-        log('Pre-connect scan complete');
+        dev.log('Pre-connect scan complete');
       } catch (e) {
-        log('Pre-connect scan error (non-fatal): $e');
+        dev.log('Pre-connect scan error (non-fatal): $e');
       }
 
       const int maxRetries = 15; // ~30 seconds total (15 attempts * 2 second delay)
@@ -498,20 +497,20 @@ class MeasurementManager
           {
               if (!device.isConnected)
               {
-                  log('Attempting to connect to ${device.remoteId.toString()} (attempt ${retryCount + 1}/$maxRetries)');
+                  dev.log('Attempting to connect (attempt ${retryCount + 1}/$maxRetries)');
                   await device.connect(); // Attempt to connect
-                  log('Successfully connected to ${device.remoteId.toString()}');
+                  dev.log('Successfully connected to device');
 
                   // Perform service discovery once connected
                   List<BluetoothService> services = await device.discoverServices();
                   await handleServiceDiscovery(services);
-                  log('Service discovery completed for ${device.remoteId.toString()}');
+                  dev.log('Service discovery completed');
 
                   return; // Exit the loop after a successful connection and service discovery
               }
               else
               {
-                  log('Device ${device.remoteId.toString()} is already connected. Performing service discovery...');
+                  dev.log('Device is already connected. Performing service discovery...');
                   List<BluetoothService> services = await device.discoverServices();
                   await handleServiceDiscovery(services);
                   return; // Exit the loop if already connected
@@ -520,16 +519,16 @@ class MeasurementManager
           catch (e)
           {
               retryCount++;
-              log('Failed to connect to ${device.remoteId.toString()}: $e', level: 1000);
+              dev.log('Failed to connect to device: $e', level: 1000);
               if (retryCount < maxRetries) {
-                  log('Retrying connection in 2 seconds... (attempt $retryCount/$maxRetries)');
+                  dev.log('Retrying connection in 2 seconds... (attempt $retryCount/$maxRetries)');
                   await Future.delayed(const Duration(seconds: 2)); // Wait before retrying
               }
           }
       }
 
       // Max retries exceeded - send failure message
-      log('Connection failed after $maxRetries attempts', level: 1000);
+      dev.log('Connection failed after $maxRetries attempts', level: 1000);
       await messenger.sendMsg(msglib.Msg(
           deviceType: msglib.DeviceType.Phone,
           taskType: msglib.TaskType.Measure,
@@ -542,7 +541,7 @@ class MeasurementManager
   // Send a message when the device is disconnected
   Future<void> sendDisconnectionMsg (BluetoothDevice device) async
   {
-      log('Sending disconnection message for device: ${device.remoteId.toString()}');
+      dev.log('Sending disconnection message for device');
       await messenger.sendMsg (msglib.Msg (deviceType: msglib.DeviceType.Phone,
                                             taskType:  msglib.TaskType.DisconnectPeripheralFor,
                                             status:    msglib.Status.succeeded,
@@ -555,7 +554,7 @@ class MeasurementManager
       {
           if (service.uuid == BluetoothManager.bloodPressureServiceUUID)
           {
-              log('Found blood pressure service: ${service.uuid}');
+              dev.log('Found blood pressure service: ${service.uuid}');
               await handleMeasurementCharacteristicDiscovery (service);
           }
       }
@@ -567,15 +566,15 @@ class MeasurementManager
     {
       if (characteristic.uuid == BluetoothManager.bloodPressureCharacteristicUUID)
       {
-          log('Found measurement characteristic: ${characteristic.uuid}');
+          dev.log('Found measurement characteristic: ${characteristic.uuid}');
 
           // FIXED: Enable notifications FIRST so we're ready to receive data
           await enableNotifications(characteristic);
 
           // Wait for device to configure notifications
-          log('Waiting 2 seconds for device to be ready...');
+          dev.log('Waiting 2 seconds for device to be ready...');
           await Future.delayed(const Duration(seconds: 2));
-          log('2-second delay complete');
+          dev.log('2-second delay complete');
 
           // THEN write command to request measurement
           await requestMeasurement(characteristic);
@@ -585,13 +584,13 @@ class MeasurementManager
 
   Future<void> enableNotifications(BluetoothCharacteristic characteristic) async
   {
-    log('Enabling notifications for characteristic: ${characteristic.uuid}');
+    dev.log('Enabling notifications for characteristic: ${characteristic.uuid}');
 
     try 
     {
       // Now, enable notifications again
       await characteristic.setNotifyValue(true);
-      log('Notifications enabled for characteristic: ${characteristic.uuid}');
+      dev.log('Notifications enabled for characteristic: ${characteristic.uuid}');
 
       // Listen to the characteristic's value changes
       characteristic.lastValueStream.listen(
@@ -601,7 +600,7 @@ class MeasurementManager
       );
     } catch (e) 
     {
-      log('Failed to enable notifications for characteristic ${characteristic.uuid}: $e', level: 1000);
+      dev.log('Failed to enable notifications for characteristic ${characteristic.uuid}: $e', level: 1000);
 
       // Send failure message
       await messenger.sendMsg(
@@ -620,11 +619,11 @@ class MeasurementManager
           // Command to start measurement (adjust based on device specifications)
           List<int> command = [0x02]; 
 
-          log('Sending measurement request command: $command');
+          dev.log('Sending measurement request command: $command');
           await characteristic.write(command, withoutResponse: false);
-          log('Measurement request sent successfully');
+          dev.log('Measurement request sent successfully');
       } catch (e) {
-          log('Failed to send measurement request: $e', level: 1000);
+          dev.log('Failed to send measurement request: $e', level: 1000);
       }
   }
 
@@ -632,11 +631,11 @@ class MeasurementManager
   {
       if (data.isEmpty)
       {
-          log('Received empty data from characteristic: ${characteristic.uuid}');
+          dev.log('Received empty data from characteristic: ${characteristic.uuid}');
           return;
       }
 
-      log('Received data from ${characteristic.uuid}: $data');
+      dev.log('Received data from ${characteristic.uuid}: $data');
 
       try
       {
@@ -645,12 +644,12 @@ class MeasurementManager
           if (parsedData.isNotEmpty)
           {
               syncMeasurements.add (parsedData);
-              log('Parsed data added: $parsedData');
+              dev.log('Parsed data added: $parsedData');
           }
       }
       catch (e)
       {
-          log('Error parsing data from ${characteristic.uuid}: $e', level: 1000);
+          dev.log('Error parsing data from ${characteristic.uuid}: $e', level: 1000);
       }
   }
 
@@ -658,7 +657,7 @@ class MeasurementManager
   {
       if (syncMeasurements.isEmpty)
       {
-          log('No measurements available to send.');
+          dev.log('No measurements available to send.');
           return;
       }
 
@@ -670,13 +669,13 @@ class MeasurementManager
       );
 
       await messenger.sendMsg (msg);
-      log('Measurements sent successfully. Clearing syncMeasurements.');
+      dev.log('Measurements sent successfully. Clearing syncMeasurements.');
       syncMeasurements.clear(); // Fixed: was commented out causing duplicates
   }
 
   void dispose()
   {
-      log('Disposing MeasurementManager.');
+      dev.log('Disposing MeasurementManager.');
   }
 }
 

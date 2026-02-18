@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -206,8 +207,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _startMeasurement() {
-    print('🟢 START button pressed in HomeScreen!');
-    print('🟢 Messenger is: ${widget.messenger}');
+    dev.log('START button pressed in HomeScreen');
+    dev.log('Messenger is: ${widget.messenger}');
 
     // Show snackbar for immediate feedback
     ScaffoldMessenger.of(context).showSnackBar(
@@ -218,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (widget.messenger == null) {
-      print('⚠️ Messenger is NULL - cannot send message');
+      dev.log('Messenger is NULL - cannot send message');
       _showNoPairedDeviceDialog('Messenger not available. Please restart the app.');
       return;
     }
@@ -228,9 +229,9 @@ class _HomeScreenState extends State<HomeScreen> {
       status: Status.request,
       sender: [ComponentType.View],
     );
-    print('🟢 Sending Measure request message...');
+    dev.log('Sending Measure request message...');
     widget.messenger?.sendMsg(msg);
-    print('🟢 Message sent!');
+    dev.log('Message sent!');
   }
 
   void _onNavTap(int index) {

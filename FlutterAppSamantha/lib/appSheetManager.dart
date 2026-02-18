@@ -61,7 +61,7 @@ class AppSheetManager {
         dev.log("Data sent successfully to AppSheet!");
       } else {
         dev.log("Failed to send data to AppSheet. Status code: ${response.statusCode}");
-        dev.log("Response body: ${response.body}");
+        dev.log("Response status: ${response.statusCode}");
       }
     } catch (e) {
       dev.log("Error sending data to AppSheet: $e");

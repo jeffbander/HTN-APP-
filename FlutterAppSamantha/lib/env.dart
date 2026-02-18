@@ -50,7 +50,7 @@ class Environment {
         }
         dev.log('[Environment] Using runtime IP: $_runtimeIp');
       } else {
-        url = "https://10.141.18.84:3001"; // Local Flask dev server (Mac IP for phone testing)
+        url = "https://127.0.0.1:3001"; // Local Flask dev server
         dev.log('[Environment] Using default localhost URL');
       }
     } else {
@@ -86,6 +86,6 @@ class Environment {
   /// Remote backend URL
   static String remoteApiUrl([String path = ""]) {
     final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
-    return "https://34.55.98.226:3001/consumer${normalizedPath.isNotEmpty ? '/$normalizedPath' : ''}";
+    return "https://REMOTE_HOST_PLACEHOLDER:3001/consumer${normalizedPath.isNotEmpty ? '/$normalizedPath' : ''}";
   }
 }

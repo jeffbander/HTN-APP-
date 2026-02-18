@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -114,7 +115,7 @@ class _RegistrationWizardState extends State<RegistrationWizard> {
       await prefs.setString('DOB', _registrationData.dateOfBirth?.toIso8601String() ?? '');
       await prefs.setString('login', _registrationData.email ?? ''); // Save email as login field
 
-      print('Registration data saved to SharedPreferences');
+      dev.log('Registration data saved to SharedPreferences');
 
       // Submit to backend API
       final flaskReg = FlaskRegUsr();
@@ -159,7 +160,7 @@ class _RegistrationWizardState extends State<RegistrationWizard> {
         // Store token securely
         const secureStorage = FlutterSecureStorage();
         await secureStorage.write(key: 'auth_token', value: result.data['token']);
-        print('Auth token stored in secure storage');
+        dev.log('Auth token stored in secure storage');
 
         _registrationData.registrationStatus = RegistrationStatus.pendingApproval;
         Navigator.of(context).pushReplacementNamed('/pending-approval');

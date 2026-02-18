@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'msg.dart';
 
@@ -18,7 +19,7 @@ class _IdleMeasureViewState extends State<IdleMeasureView> {
   @override
   void initState() {
     super.initState();
-    print("IdleMeasureView appeared. Displaying first image...");
+    dev.log("IdleMeasureView appeared. Displaying first image...");
 
     // Start second image fade-in after 5 seconds (palm tree animation)
     Future.delayed(const Duration(seconds: 5), () {
@@ -35,7 +36,7 @@ class _IdleMeasureViewState extends State<IdleMeasureView> {
     setState(() {
       measurementFound = true;
     });
-    print("message sent to ui update to new screen");
+    dev.log("message sent to ui update to new screen");
 
     widget.messenger.sendMsg(
       Msg(
@@ -48,7 +49,7 @@ class _IdleMeasureViewState extends State<IdleMeasureView> {
 
   void onCancel() {
     // Handle cancel logic - send message to NavigationManager
-    print('Cancel button pressed - sending cancel message');
+    dev.log('Cancel button pressed - sending cancel message');
 
     // Send cancel message - NavigationManager will handle navigation
     // Do NOT navigate locally here - it causes a race condition
@@ -170,7 +171,7 @@ class _IdleMeasureViewState extends State<IdleMeasureView> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
-                print("Cancel button pressed");
+                dev.log("Cancel button pressed");
                 onCancel();
               },
               child: Container(
@@ -215,7 +216,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
     // After 5 seconds, send a message and change the screen
     Future.delayed(const Duration(seconds: 5), () {
       // Send message to transition to another screen
-      print("Message sent, navigating to the next screen");
+      dev.log("Message sent, navigating to the next screen");
 
       widget.messenger.sendMsg(
         Msg(

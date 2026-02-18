@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'msg.dart';
 import 'theme/app_theme.dart';
@@ -22,7 +23,7 @@ class _LaunchViewState extends State<LaunchView> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    print("LaunchView appeared. Starting loading...");
+    dev.log("LaunchView appeared. Starting loading...");
 
     // Pulse animation for loading indicator
     _pulseController = AnimationController(
@@ -38,7 +39,7 @@ class _LaunchViewState extends State<LaunchView> with SingleTickerProviderStateM
 
     // Notify via messenger after 5 seconds
     Future.delayed(const Duration(seconds: 5), () {
-      print("⏱ 5 seconds passed, sending launch message");
+      dev.log("5 seconds passed, sending launch message");
       widget.messenger.sendMsg(
         Msg(
           taskType: TaskType.Launch,

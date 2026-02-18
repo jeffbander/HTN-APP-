@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'dart:async';
 
@@ -39,7 +40,7 @@ class _LogViewState extends State<LogView> {
   // Handle log messages and update the logs list
   void handleLogMsg(dynamic data) {
     final msg = data[2] as Msg;
-    print("LogView: handleLogMsg: ${data[0]}: ${data[1]}: ${msg.msgId}");
+    dev.log("LogView: handleLogMsg: ${data[0]}: ${data[1]}: ${msg.msgId}");
     final sender = msg.sender.last;
     final newLog = "[${msg.msgId}] [$sender] ${msg.taskType} ${msg.status}";
     setState(() {

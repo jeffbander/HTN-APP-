@@ -301,7 +301,7 @@ class SourceManager extends ChangeNotifier {
       );
 
       if (token != null) {
-        dev.log("✅ User registered successfully, token: $token");
+        dev.log("User registered successfully, token present");
         await storage.write(key: "auth_token", value: token);
       } else {
         dev.log("❌ User registration failed (no token returned)");
@@ -317,7 +317,7 @@ class SourceManager extends ChangeNotifier {
       );
 
       if (remoteToken != null) {
-        dev.log("✅ [Remote] User registered successfully, token: $remoteToken");
+        dev.log("[Remote] User registered successfully, token present");
       } else {
         dev.log("⚠️ [Remote] User registration failed (no token returned)");
       }
@@ -378,7 +378,7 @@ class SourceManager extends ChangeNotifier {
       );
 
       if (token != null) {
-        dev.log("✅ Token received: $token");
+        dev.log("Token received successfully");
         await uiMessenger.sendMsg(Msg(
           taskType: TaskType.auth,
           status: Status.succeeded,
@@ -415,18 +415,16 @@ class SourceManager extends ChangeNotifier {
 
   //------------------------------------------------------
   Future<void> startPairing() async {
-    print("🔹 startPairing called, curSrcObj=${curSrcObj != null}, peripheral=${curSrcObj?.connectedPeripheral != null}");
-    dev.log("🔹 startPairing called");
+    dev.log("startPairing called, curSrcObj=${curSrcObj != null}, peripheral=${curSrcObj?.connectedPeripheral != null}");
     if (curSrcObj == null) {
-      print("🔹 startPairing: curSrcObj is null, starting scan...");
+      dev.log("startPairing: curSrcObj is null, starting scan...");
       await bluetoothManager.startScan();
     }
     if (curSrcObj != null && curSrcObj!.connectedPeripheral != null) {
-      print("🔹 startPairing: calling pairDevice on ${curSrcObj!.connectedPeripheral!.remoteId}");
+      dev.log("startPairing: calling pairDevice...");
       await bluetoothManager.pairDevice(curSrcObj!.connectedPeripheral!);
     } else {
-      print("❌ startPairing: no device available to pair (curSrcObj=${curSrcObj != null}, peripheral=${curSrcObj?.connectedPeripheral})");
-      dev.log("❌ startPairing: no device available to pair");
+      dev.log("startPairing: no device available to pair");
     }
   }
 
@@ -437,7 +435,7 @@ class SourceManager extends ChangeNotifier {
 
   //------------------------------------------------------
   Future<void> startScanning() async {
-    print("📱 SOURCE MGR: startScanning called, curDeviceModel=$curDeviceModel");
+    dev.log("SOURCE MGR: startScanning called, curDeviceModel=$curDeviceModel");
     switch (curDeviceModel) {
       case DeviceModel.DataFile:
         curSrcObj ??= DeviceModel.DataFile as SourceBase?;
@@ -453,11 +451,11 @@ class SourceManager extends ChangeNotifier {
       case DeviceModel.Omron3Series:
       case DeviceModel.Omron5Series:
       case DeviceModel.Transtek:
-        print("📱 SOURCE MGR: Starting Bluetooth scan for Omron device...");
+        dev.log("SOURCE MGR: Starting Bluetooth scan for Omron device...");
         bluetoothManager.startScan();
         break;
       default:
-        print('📱 SOURCE MGR: Unknown device model: $curDeviceModel');
+        dev.log('SOURCE MGR: Unknown device model: $curDeviceModel');
     }
   }
 
@@ -538,14 +536,14 @@ class SourceManager extends ChangeNotifier {
 
   //------------------------------------------------------
   Future<void> uploadMeasurements() async {
-    print("🔹 uploadMeasurements called");
+    dev.log("uploadMeasurements called");
 
     try {
       List<Map<DateTime, List<int>>> measurements = bluetoothManager.getSyncMeasurements();
-      print("🔹 Got ${measurements.length} measurements from Bluetooth manager");
+      dev.log("Got ${measurements.length} measurements from Bluetooth manager");
 
       if (measurements.isEmpty) {
-        print("⚠️ No measurements to upload");
+        dev.log("No measurements to upload");
         return;
       }
 
@@ -568,29 +566,29 @@ class SourceManager extends ChangeNotifier {
         date: date,
         intData: values,
       ));
-      print("✅ Measure.finished sent — navigating to results");
+      dev.log("Measure.finished sent — navigating to results");
 
       // Save locally FIRST so Recent Measurements updates immediately
       await writeMeasurementsToDefaults(measurements);
-      print("✅ Measurements saved locally");
+      dev.log("Measurements saved locally");
 
       // Now upload to backends (user already sees results)
       try {
-        print("📤 Sending to Flask backend...");
+        dev.log("Sending to Flask backend...");
         await flaskUploader.sendDataToBackend(
           userInfo.concatData(),
           curDeviceID,
           measurements.cast<Map<DateTime, List<int>>>(),
         );
-        print("✅ Flask upload complete");
+        dev.log("Flask upload complete");
 
-        print("📤 Sending to Remote backend (34.55.98.226)...");
+        dev.log("Sending to Remote backend...");
         await remoteUploader.sendDataToBackend(
           userInfo.concatData(),
           curDeviceID,
           measurements.cast<Map<DateTime, List<int>>>(),
         );
-        print("✅ Remote upload complete");
+        dev.log("Remote upload complete");
       } catch (e, stack) {
         dev.log("⚠️ Backend upload failed (non-fatal): $e\n$stack");
       }

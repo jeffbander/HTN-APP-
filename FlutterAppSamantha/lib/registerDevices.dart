@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:developer';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'commonWidgets.dart';
 import 'msg.dart';
@@ -135,20 +135,20 @@ class _RegisterDeviceViewState extends State<RegisterDeviceView> {
   void _handlePairingResult(Msg msg) {
     if (msg.taskType == TaskType.Pair) {
       if (msg.status == Status.succeeded) {
-        log("✅ Pairing succeeded!");
+        dev.log("✅ Pairing succeeded!");
         setState(() {
           isRegisterClicked = false;
         });
         // Navigation will be handled by NavigationManager
       } else if (msg.status == Status.failed) {
-        log("❌ Pairing failed");
+        dev.log("❌ Pairing failed");
         setState(() {
           isRegisterClicked = false;
         });
         _showPairingErrorDialog();
       }
     } else if (msg.taskType == TaskType.Scan && msg.status == Status.failed) {
-      log("❌ Scan failed - no device found");
+      dev.log("❌ Scan failed - no device found");
       setState(() {
         isRegisterClicked = false;
       });

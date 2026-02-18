@@ -178,7 +178,7 @@ class SyncService extends ChangeNotifier {
         // Get auth token for this user
         final token = await _getAuthToken(email);
         if (token == null) {
-          dev.log('Could not get token for $email, skipping ${readings.length} readings');
+          dev.log('Could not get token for user, skipping ${readings.length} readings');
           skipped += readings.length;
           continue;
         }
@@ -214,7 +214,7 @@ class SyncService extends ChangeNotifier {
     // instead of calling /consumer/login (which now requires email OTP)
     final token = await _storage.read(key: 'auth_token');
     if (token == null) {
-      dev.log('No auth token available for $email — user must log in first');
+      dev.log('No auth token available — user must log in first');
     }
     return token;
   }

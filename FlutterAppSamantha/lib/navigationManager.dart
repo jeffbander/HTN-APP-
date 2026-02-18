@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -190,7 +190,7 @@ class NavigationManager extends ChangeNotifier {
         }
       }
     } catch (e) {
-      log('Token decode error: $e');
+      dev.log('Token decode error: $e');
       // If we can't decode, try biometric anyway
     }
 
@@ -235,7 +235,7 @@ class NavigationManager extends ChangeNotifier {
       case ViewType.registerUser:
         // Use new registration wizard instead of old form
         _currentViewW = const RegistrationWizard();
-        print("🔹 NavigationManager: Showing new RegistrationWizard");
+        dev.log("NavigationManager: Showing new RegistrationWizard");
         break;
 
       case ViewType.registerUserNew:
@@ -466,11 +466,11 @@ class NavigationManager extends ChangeNotifier {
         break;
 
       case TaskType.FetchUnionInfo: 
-        // log("union info recieved in navmanager");
-        log(msg.sender.toString()); 
+        // dev.log("union info recieved in navmanager");
+        dev.log(msg.sender.toString());
         if (msg.sender.last == ComponentType.SourceManager)
         {
-          log("union info recieved in navmanager "); 
+          dev.log("union info recieved in navmanager "); 
           uiMessenger.forwardMsg([ComponentType.NavigationManager], msg);
         }
 

@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -9,14 +10,14 @@ class TokenManager {
   /// Build the base API URL using Environment.baseUrl
   static String get _apiBase {
     final url = Environment.baseUrl; // defined in env.dart (already includes port)
-    print('[TokenManager] Using API Base URL: $url');
+    dev.log('[TokenManager] Using API Base URL: $url');
     return url;
   }
 
   /// Request a token from your backend (uses env.dart)
   static Future<String?> requestToken(
       String name, String dob, String login, String unionId) async {
-    print('[TokenManager] Requesting token for user: $name, email: $login');
+    dev.log('[TokenManager] Requesting token for user: [redacted]');
     final uri = Uri.parse("$_apiBase/consumer/register");
 
     try {
@@ -32,8 +33,7 @@ class TokenManager {
         }),
       );
 
-      print('[TokenManager] Response status: ${response.statusCode}');
-      print('[TokenManager] Response body: ${response.body}');
+      dev.log('[TokenManager] Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -47,17 +47,16 @@ class TokenManager {
             await _storage.write(key: 'userId', value: userId.toString());
           }
 
-          print('[TokenManager] Token and userId stored.');
+          dev.log('[TokenManager] Token and userId stored.');
           return token;
         } else {
-          print("[TokenManager] Missing 'singleUseToken' in response.");
+          dev.log("[TokenManager] Missing 'singleUseToken' in response.");
         }
       } else {
-        print("[TokenManager] Registration failed.");
+        dev.log("[TokenManager] Registration failed.");
       }
     } catch (e, stack) {
-      print('[TokenManager] Exception during requestToken: $e');
-      print(stack);
+      dev.log('[TokenManager] Exception during requestToken: $e\n$stack');
     }
 
     return null;
@@ -66,14 +65,14 @@ class TokenManager {
   /// Submit measurement with token validation
   static Future<bool> submitMeasurement(
       Map<String, dynamic> measurement) async {
-    print('[TokenManager] Submitting measurement...');
+    dev.log('[TokenManager] Submitting measurement...');
 
     try {
       final token = await _storage.read(key: 'auth_token');
       final userId = await _storage.read(key: 'userId');
 
       if (token == null || userId == null) {
-        print('[TokenManager] No token or userId found → aborting.');
+        dev.log('[TokenManager] No token or userId found → aborting.');
         return false;
       }
 
@@ -89,13 +88,11 @@ class TokenManager {
         }),
       );
 
-      print('[TokenManager] Response status: ${response.statusCode}');
-      print('[TokenManager] Response body: ${response.body}');
+      dev.log('[TokenManager] Response status: ${response.statusCode}');
 
       return response.statusCode == 200;
     } catch (e, stack) {
-      print('[TokenManager] Exception: $e');
-      print(stack);
+      dev.log('[TokenManager] Exception: $e\n$stack');
       return false;
     }
   }

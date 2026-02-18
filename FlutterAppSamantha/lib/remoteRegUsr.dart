@@ -89,9 +89,9 @@ class RemoteRegUsr {
       final data = jsonDecode(resp.body);
       final token = data['singleUseToken'];
       if (token != null) {
-        dev.log("[Remote] Registration successful, received token: $token");
+        dev.log("[Remote] Registration successful, token present");
       } else {
-        dev.log("[Remote] Registration response missing token: $data");
+        dev.log("[Remote] Registration response missing token");
       }
 
       return token;

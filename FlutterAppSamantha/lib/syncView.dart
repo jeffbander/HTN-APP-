@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'commonWidgets.dart';
@@ -87,7 +88,7 @@ This may take a moment...
             onPressed: ()
             {
               // Provide your logic for the onPressed action here
-              print ("HeaderView button pressed");
+              dev.log("HeaderView button pressed");
             },
           ),
 
@@ -119,7 +120,7 @@ This may take a moment...
             message: formattedMessage,
             onClose: () {
               // Logic for closing the alert
-              print("Alert closed");
+              dev.log("Alert closed");
               setState(() {
                 showAlert = false;
               });

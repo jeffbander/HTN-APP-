@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
@@ -249,7 +250,7 @@ class _PairingScreenState extends State<PairingScreen>
   }
 
   Future<void> _startRealScan() async {
-    print('📱 PAIRING SCREEN: _startRealScan called');
+    dev.log('PAIRING SCREEN: _startRealScan called');
     setState(() {
       _isSearching = true;
       _deviceFound = false;
@@ -260,7 +261,7 @@ class _PairingScreenState extends State<PairingScreen>
     });
 
     try {
-      print('📱 PAIRING SCREEN: calling startScanning...');
+      dev.log('PAIRING SCREEN: calling startScanning...');
       await _sourceManager.startScanning();
 
       // Timeout after 15 seconds if no device found
@@ -283,7 +284,7 @@ class _PairingScreenState extends State<PairingScreen>
   }
 
   Future<void> _pairDevice() async {
-    print('📱 PAIRING SCREEN: _pairDevice called, selectedDevice=$_selectedDevice');
+    dev.log('PAIRING SCREEN: _pairDevice called, device=${_selectedDevice != null ? 'present' : 'null'}');
     if (_selectedDevice == null) return;
 
     setState(() {
@@ -295,7 +296,7 @@ class _PairingScreenState extends State<PairingScreen>
     try {
       // Set up the source object and trigger pairing
       _sourceManager.curSrcObj = BluetoothSource(peripheral: _selectedDevice);
-      print('📱 PAIRING SCREEN: calling startPairing...');
+      dev.log('PAIRING SCREEN: calling startPairing...');
       await _sourceManager.startPairing();
     } catch (e) {
       if (mounted) {

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:googleapis/sheets/v4.dart';
 import 'package:googleapis_auth/auth_io.dart';
-import 'dart:developer'; // For logging
+import 'dart:developer' as dev; // For logging
 import 'package:flutter/services.dart' show rootBundle;
 import 'bloodPressureData.dart';
 
@@ -46,11 +46,11 @@ class GoogleSheetsManager
         valueInputOption: "USER_ENTERED",
       );
 
-      log("Data appended successfully!");
+      dev.log("Data appended successfully!");
     } catch (e) 
     {
-      log("failed to convert data to Google Sheets format");
-      log("Error converting data: $e");
+      dev.log("failed to convert data to Google Sheets format");
+      dev.log("Error converting data: $e");
     }
   }
 
@@ -74,14 +74,14 @@ class GoogleSheetsManager
     for (int codeUnit in data.codeUnits) 
     {
       int scrambledCodeUnit = codeUnit ^ key;
-      print("Original CodeUnit: $codeUnit -> Scrambled CodeUnit: $scrambledCodeUnit");
+      dev.log("Scrambling codeUnit...");
       if (scrambledCodeUnit >= 0 && scrambledCodeUnit <= 0x10FFFF) 
       {
         scrambled.write(String.fromCharCode(scrambledCodeUnit));
       } 
       else 
       {
-        print("Invalid Unicode Scalar: $scrambledCodeUnit");
+        dev.log("Invalid Unicode Scalar encountered");
       }
     }
     return scrambled.toString();

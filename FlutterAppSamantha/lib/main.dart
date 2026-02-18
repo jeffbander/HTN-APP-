@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'sourceManager.dart';
@@ -31,8 +32,8 @@ import 'msg.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  print("App running in ${Environment.isDev ? 'DEV' : 'PROD'} mode");
-  print("API URL: ${Environment.apiUrl()}");
+  dev.log("App running in ${Environment.isDev ? 'DEV' : 'PROD'} mode");
+  dev.log("API URL: ${Environment.apiUrl()}");
 
   // Initialize sync service for offline queue
   await SyncService.instance.initialize();
@@ -43,17 +44,17 @@ void main() async {
   // Initialize notification service (stub until Firebase is configured)
   try {
     await NotificationService.instance.initialize();
-    print("NotificationService initialized");
+    dev.log("NotificationService initialized");
   } catch (e) {
-    print("NotificationService initialization failed: $e");
+    dev.log("NotificationService initialization failed: $e");
   }
 
   // Initialize local notification service for reminders
   try {
     await LocalNotificationService.instance.initialize();
-    print("LocalNotificationService initialized");
+    dev.log("LocalNotificationService initialized");
   } catch (e) {
-    print("LocalNotificationService initialization failed: $e");
+    dev.log("LocalNotificationService initialization failed: $e");
   }
 
   final sourceManager = SourceManager.shared;

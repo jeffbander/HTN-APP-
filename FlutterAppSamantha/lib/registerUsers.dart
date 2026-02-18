@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:developer';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'env.dart';
 import 'msg.dart';
@@ -61,7 +61,7 @@ class _RegisterUserViewState extends State<RegisterUserView> {
   void initState() {
     super.initState();
 
-    log("🔹 RegisterUserView initState: initialUnion=${widget.initialUnion}");
+    dev.log("🔹 RegisterUserView initState: initialUnion=${widget.initialUnion}");
 
     firstLastNameController.text = widget.initialFirstLastName;
     loginController.text = widget.initialLogin;
@@ -81,7 +81,7 @@ class _RegisterUserViewState extends State<RegisterUserView> {
     // Fallback timeout: if unions don't load within 10 seconds, use test unions
     Future.delayed(const Duration(seconds: 10), () {
       if (mounted && isLoadingUnions && unions.isEmpty) {
-        log("⚠️ Union fetch timeout, using fallback unions in view");
+        dev.log("⚠️ Union fetch timeout, using fallback unions in view");
         setState(() {
           unions = ["Mount Sinai", "1199SEIU", "Local 32BJ", "Test Union"];
           selectedUnion = unions.first;
@@ -140,12 +140,12 @@ class _RegisterUserViewState extends State<RegisterUserView> {
 
   // This method receives messages from the parent via the callback
   void handleMsgStatus(Msg msg) {
-    log("🔹 handleMsgStatus called in view: $msg");
+    dev.log("🔹 handleMsgStatus called in view: $msg");
 
     if (msg.taskType == TaskType.FetchUnionInfo) 
     {
       final List<String>? receivedUnions = msg.strData?.cast<String>();
-      log("🔹 Received unions from msg: $receivedUnions");
+      dev.log("🔹 Received unions from msg: $receivedUnions");
 
       if (receivedUnions != null && receivedUnions.isNotEmpty) {
         setState(() 
@@ -160,8 +160,8 @@ class _RegisterUserViewState extends State<RegisterUserView> {
           unionController.text = selectedUnion ?? "";
           isLoadingUnions = false;
 
-          log("Unions are loaded: $isLoadingUnions");
-          log("✅ Unions updated in view: $unions");
+          dev.log("Unions are loaded: $isLoadingUnions");
+          dev.log("✅ Unions updated in view: $unions");
         });
 
       } 
@@ -172,7 +172,7 @@ class _RegisterUserViewState extends State<RegisterUserView> {
         {
           isLoadingUnions = false;
         });
-        log("❌ No unions received");
+        dev.log("❌ No unions received");
       }
     }
   }
@@ -232,7 +232,7 @@ class _RegisterUserViewState extends State<RegisterUserView> {
                           setState(() {
                             selectedUnion = v;
                             unionController.text = v ?? "";
-                            log("🔹 Union selected: $v");
+                            dev.log("🔹 Union selected: $v");
                           });
                         },
                       ),
@@ -320,12 +320,12 @@ class _RegisterUserViewState extends State<RegisterUserView> {
 
   void _handleDevModeTap() {
     _devTapCounter++;
-    log("button tapped ($_devTapCounter/5)");
+    dev.log("button tapped ($_devTapCounter/5)");
     _devTapResetTimer?.cancel();
 
     if (_devTapCounter >= 5 &&
         loginController.text.trim().toLowerCase() == "tester@gmail.com") {
-      log("DEV MODE ACTIVATED");
+      dev.log("DEV MODE ACTIVATED");
       _devTapCounter = 0;
       _devTapResetTimer?.cancel();
       DevModeService.instance.isDevMode = true;
@@ -334,7 +334,7 @@ class _RegisterUserViewState extends State<RegisterUserView> {
     }
 
     _devTapResetTimer = Timer(const Duration(seconds: 2), () {
-      log("⏱ Dev tap counter reset");
+      dev.log("⏱ Dev tap counter reset");
       _devTapCounter = 0;
     });
   }
@@ -392,8 +392,8 @@ class _RegisterUserViewState extends State<RegisterUserView> {
                   final ip = devIpController.text.trim();
                   if (ip.isNotEmpty) {
                     await Environment.setDevIp(ip);
-                    log("✅ DEV IP SAVED: $ip");
-                    log("✅ API BASE NOW: ${Environment.baseUrl}");
+                    dev.log("✅ DEV IP SAVED: $ip");
+                    dev.log("✅ API BASE NOW: ${Environment.baseUrl}");
                   }
                   setState(() => isDevModeVisible = false);
                 },

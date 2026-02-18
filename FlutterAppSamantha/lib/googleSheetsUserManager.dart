@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:googleapis/sheets/v4.dart';
 import 'package:googleapis_auth/auth_io.dart';
-import 'dart:developer'; // For logging
+import 'dart:developer' as dev; // For logging
 import 'package:flutter/services.dart' show rootBundle;
 
 class GoogleSheetsUserManager 
@@ -28,9 +28,9 @@ class GoogleSheetsUserManager
         valueInputOption: "USER_ENTERED",
       );
       
-      log("User data appended successfully!");
+      dev.log("User data appended successfully!");
     } catch (e) {
-      log("Error appending user data to Google Sheets: $e");
+      dev.log("Error appending user data to Google Sheets: $e");
     }
   }
 }

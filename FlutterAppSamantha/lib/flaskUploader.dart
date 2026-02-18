@@ -34,22 +34,22 @@ class FlaskUploader {
     List<Map<DateTime, List<dynamic>>> bloodPressureData,
   ) async {
     final client = _httpClient;
-    print("sendDataToBackend started...");
+    dev.log("sendDataToBackend started...");
 
     try {
-      print("User info: $userInfo");
-      print("Device ID: $deviceId");
-      print("Data count: ${bloodPressureData.length}");
+      dev.log("sendDataToBackend: [user info redacted]");
+      dev.log("Device ID: $deviceId");
+      dev.log("Data count: ${bloodPressureData.length}");
 
       final parts = userInfo.split(',');
       if (parts.length < 2) {
-        print("Invalid userInfo format: $userInfo");
+        dev.log("Invalid userInfo format: [redacted]");
         return;
       }
       final email = parts[1].trim();
 
       for (var i = 0; i < bloodPressureData.length; i++) {
-        print("Sending reading ${i + 1}/${bloodPressureData.length}");
+        dev.log("Sending reading ${i + 1}/${bloodPressureData.length}");
 
         final measurement = bloodPressureData[i];
         final date = measurement.keys.first;
@@ -71,7 +71,7 @@ class FlaskUploader {
 
         // If direct send failed, queue for later
         if (!success) {
-          print("Direct send failed, queuing reading for later sync");
+          dev.log("Direct send failed, queuing reading for later sync");
           await _syncService.queueReading(
             systolic: systolic,
             diastolic: diastolic,
@@ -83,12 +83,12 @@ class FlaskUploader {
         }
       }
 
-      print("All readings processed for $email");
+      dev.log("All readings processed for [email redacted]");
     } catch (e, stack) {
-      print("Fatal error in sendDataToBackend: $e\n$stack");
+      dev.log("Fatal error in sendDataToBackend: $e\n$stack");
     } finally {
       client.close();
-      print("HTTP client closed");
+      dev.log("HTTP client closed");
     }
   }
 
@@ -105,9 +105,9 @@ class FlaskUploader {
     try {
       // ---- Step 1: Get auth token from secure storage ----
       final token = await storage.read(key: 'auth_token');
-      print("📤 _trySendReading: auth_token=${token != null ? '${token.substring(0, 20)}...' : 'NULL'}");
+      dev.log("_trySendReading: auth_token=${token != null ? 'present' : 'NULL'}");
       if (token == null) {
-        print("❌ No auth token available — user must log in first");
+        dev.log("No auth token available — user must log in first");
         return false;
       }
 
@@ -135,12 +135,12 @@ class FlaskUploader {
             .timeout(const Duration(seconds: 8));
         dev.log("Reading upload took ${stopwatch.elapsedMilliseconds} ms");
 
-        print("📤 Reading upload response: ${resp.statusCode}");
+        dev.log("Reading upload response: ${resp.statusCode}");
         if (resp.statusCode == 200 || resp.statusCode == 201) {
-          print("✅ Reading uploaded successfully!");
+          dev.log("Reading uploaded successfully!");
           return true;
         } else {
-          print("❌ Upload failed (${resp.statusCode}): ${resp.body}");
+          dev.log("Upload failed: status ${resp.statusCode}");
           return false;
         }
       } on SocketException catch (e) {

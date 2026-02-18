@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'commonWidgets.dart';
 import 'package:intl/intl.dart';
 import 'msg.dart';
-import 'dart:developer'; // For logging
+import 'dart:developer' as dev; // For logging
 import 'theme/app_theme.dart';
 import 'widgets/gradient_header.dart';
 import 'widgets/app_card.dart';
@@ -116,8 +116,8 @@ class _StartMeasurementViewState extends State<StartMeasurementView> {
   }
 
   void _startMeasurement() {
-    print('🟢 START button pressed in StartMeasurementView!');
-    print('🟢 Messenger is: ${widget.messenger}');
+    dev.log('START button pressed in StartMeasurementView');
+    dev.log('Messenger is: ${widget.messenger}');
 
     // Send measure request to device - this will trigger navigation to IdleMeasureView
     final msg = Msg(
@@ -127,9 +127,9 @@ class _StartMeasurementViewState extends State<StartMeasurementView> {
     );
 
     if (widget.messenger == null) {
-      print('⚠️ Messenger is NULL in StartMeasurementView!');
+      dev.log('Messenger is NULL in StartMeasurementView!');
     } else {
-      print('🟢 Sending Measure request from StartMeasurementView...');
+      dev.log('Sending Measure request from StartMeasurementView...');
     }
     widget.messenger?.sendMsg(msg);
   }
@@ -549,7 +549,7 @@ class _MeasurementViewState extends State<MeasurementView> {
     super.initState();
 
     Map<DateTime, List<int>>? l = widget.lastMeasurement;
-    log("Latest Measurement: $l");
+    dev.log("Latest Measurement: $l");
     if (l != null && l.isNotEmpty) {
       curTimestamp = l.keys.first;
       List<int>? values = l[curTimestamp];
