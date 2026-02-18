@@ -39,7 +39,7 @@ def register():
         return jsonify({'error': errors}), 400
 
     # Check for existing user
-    email = data['email'].strip()
+    email = data['email'].strip().lower()
     existing = User.find_by_email(email)
     if existing:
         return jsonify({'error': 'A user with this email already exists'}), 409
@@ -93,16 +93,22 @@ def register():
         user.missed_doses = int(data['missed_doses'])
 
     db.session.add(user)
-    db.session.commit()
+    db.session.flush()
 
-    # Send email verification code
-    verification = EmailVerification.create_for_user(user.id)
-    send_verification_email(email, verification.code)
+    try:
+        # Send email verification code
+        verification = EmailVerification.create_for_user(user.id)
+        send_verification_email(email, verification.code)
 
-    token = generate_single_use_token(user.id, email)
+        token = generate_single_use_token(user.id, email)
 
-    audit_log('CREATE', 'user', resource_id=str(user.id),
-              details={'action': 'registration'}, user_id=str(user.id))
+        audit_log('CREATE', 'user', resource_id=str(user.id),
+                  details={'action': 'registration'}, user_id=str(user.id))
+
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Registration failed. Please try again.'}), 500
 
     return jsonify({
         'singleUseToken': token,
@@ -118,26 +124,34 @@ def login():
     if not data or not data.get('email'):
         return jsonify({'error': 'Email is required'}), 400
 
-    email = data['email'].strip()
+    email = data['email'].strip().lower()
     email_hash = hash_email(email)
     user = User.find_by_email(email)
+
+    # Generic response for cases where we must not reveal account status
+    generic_mfa_response = jsonify({
+        'mfa_required': True,
+        'mfa_type': 'email',
+        'message': 'If this email is registered, a login code has been sent. Please check your email.',
+    }), 200
+
     if not user:
         audit_log('LOGIN_FAILED', 'user',
                   details={'reason': 'not_found', 'email_hash': email_hash})
-        return jsonify({'error': 'User not found'}), 404
+        return generic_mfa_response
 
     if user.user_status == 'deactivated' or not user.is_active:
         audit_log('LOGIN_FAILED', 'user', resource_id=str(user.id),
                   details={'reason': 'deactivated', 'email_hash': email_hash},
                   user_id=str(user.id))
-        return jsonify({'error': 'Account is deactivated', 'user_status': 'deactivated'}), 403
+        return generic_mfa_response
 
     # Email verification required for users past the approval stage
     if not user.is_email_verified and user.user_status != 'pending_approval':
         audit_log('LOGIN_FAILED', 'user', resource_id=str(user.id),
                   details={'reason': 'email_not_verified', 'email_hash': email_hash},
                   user_id=str(user.id))
-        return jsonify({'error': 'Email not verified'}), 403
+        return generic_mfa_response
 
     # MFA: admin users must set up MFA before proceeding
     if user.is_admin and not user.is_mfa_enabled:

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'dart:developer' as dev;
 import 'theme/app_theme.dart';
@@ -10,6 +11,7 @@ import 'flaskRegUsr.dart';
 import 'historyView.dart';
 import 'msg.dart';
 import 'utils/status_router.dart';
+import 'services/sync_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final BaseMessenger? messenger;
@@ -256,6 +258,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _storage.delete(key: 'auth_token');
     await _storage.delete(key: 'userId');
     await _storage.delete(key: 'user_status');
+    // Clear local measurement cache to prevent cross-account data leakage
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('measurements');
+    await SyncService.instance.clearQueue();
     // Keep userEmail for autofill on next login
     if (mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);

@@ -252,6 +252,38 @@ class FlaskRegUsr {
     }
   }
 
+  /// Fetches the authenticated user's blood pressure readings from the backend.
+  Future<List<Map<String, dynamic>>?> getReadings(String token) async {
+    final client = _unionClient;
+    try {
+      final uri = Uri.parse("$baseUrl/consumer/readings");
+      dev.log("Fetching readings from $uri");
+
+      final resp = await client.get(
+        uri,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      dev.log("Readings response status: ${resp.statusCode}");
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as List;
+        return data.cast<Map<String, dynamic>>();
+      } else {
+        dev.log("Failed to fetch readings: ${resp.statusCode} ${resp.body}");
+        return null;
+      }
+    } catch (e, stack) {
+      dev.log("Error fetching readings: $e\n$stack");
+      return null;
+    } finally {
+      client.close();
+    }
+  }
+
   /// Fetches the authenticated user's profile.
   Future<Map<String, dynamic>?> getProfile(String token) async {
     final client = _unionClient;

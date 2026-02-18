@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'dart:developer' as dev;
+import 'flaskRegUsr.dart';
 import 'msg.dart';
 import 'theme/app_theme.dart';
 import 'widgets/gradient_header.dart';
@@ -34,7 +37,12 @@ class _HistoryViewState extends State<HistoryView> {
 
   Future<void> _loadMeasurements() async {
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getStringList('measurements') ?? [];
+    var stored = prefs.getStringList('measurements') ?? [];
+
+    // If local cache is empty, fetch from backend for the current user
+    if (stored.isEmpty) {
+      stored = await _fetchFromBackend(prefs) ?? [];
+    }
 
     final List<Map<DateTime, List<int>>> loaded = [];
 
@@ -45,7 +53,7 @@ class _HistoryViewState extends State<HistoryView> {
         final values = List<int>.from(map['values']);
         loaded.add({date: values});
       } catch (e) {
-        print('Error parsing measurement: $e');
+        dev.log('Error parsing measurement: $e');
       }
     }
 
@@ -57,6 +65,41 @@ class _HistoryViewState extends State<HistoryView> {
         _measurements = loaded;
         _isLoading = false;
       });
+    }
+  }
+
+  /// Fetch readings from the backend API and cache them locally.
+  Future<List<String>?> _fetchFromBackend(SharedPreferences prefs) async {
+    try {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'auth_token');
+      if (token == null) return null;
+
+      final api = FlaskRegUsr();
+      final readings = await api.getReadings(token);
+      if (readings == null || readings.isEmpty) return null;
+
+      // Convert backend format to local cache format
+      final localEntries = <String>[];
+      for (final r in readings) {
+        final entry = jsonEncode({
+          'date': r['reading_date'],
+          'values': [
+            r['systolic'],
+            r['diastolic'],
+            r['heart_rate'] ?? 0,
+          ],
+        });
+        localEntries.add(entry);
+      }
+
+      // Persist to local cache
+      await prefs.setStringList('measurements', localEntries);
+      dev.log('Fetched ${localEntries.length} readings from backend into local cache');
+      return localEntries;
+    } catch (e, stack) {
+      dev.log('Error fetching readings from backend: $e\n$stack');
+      return null;
     }
   }
 

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'widgets/gradient_header.dart';
 import 'widgets/app_card.dart';
 import 'widgets/primary_button.dart';
+import 'services/sync_service.dart';
 
 class DeactivatedScreen extends StatelessWidget {
   const DeactivatedScreen({super.key});
@@ -13,6 +15,10 @@ class DeactivatedScreen extends StatelessWidget {
     await storage.delete(key: 'auth_token');
     await storage.delete(key: 'userId');
     await storage.delete(key: 'user_status');
+    // Clear local measurement cache to prevent cross-account data leakage
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('measurements');
+    await SyncService.instance.clearQueue();
     if (context.mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
