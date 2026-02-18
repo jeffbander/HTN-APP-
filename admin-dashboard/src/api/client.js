@@ -27,7 +27,20 @@ export async function fetchApi(path, options = {}) {
     ...options.headers,
   }
 
-  const res = await fetch(path, { ...options, headers })
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+  let res
+  try {
+    res = await fetch(path, { ...options, headers, signal: controller.signal })
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.')
+    }
+    throw err
+  }
+  clearTimeout(timeoutId)
 
   if (res.status === 401) {
     clearAuth()
