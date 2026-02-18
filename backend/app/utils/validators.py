@@ -3,6 +3,7 @@ Input validation for registration, readings, and profile updates.
 """
 import re
 from datetime import datetime
+from email_validator import validate_email, EmailNotValidError
 
 
 def validate_profile_update(data: dict) -> list:
@@ -127,8 +128,11 @@ def validate_registration(data: dict) -> list:
     email = (data.get('email') or '').strip()
     if not email:
         errors.append('Email is required')
-    elif not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
-        errors.append('Invalid email format')
+    else:
+        try:
+            validate_email(email, check_deliverability=False)
+        except EmailNotValidError:
+            errors.append('Invalid email format')
 
     union_id = data.get('union_id')
     if union_id is None:
