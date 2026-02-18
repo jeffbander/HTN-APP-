@@ -12,6 +12,7 @@ from app.models.email_verification import EmailVerification
 from app.utils.auth import generate_single_use_token, token_required, decode_token
 from app.utils.audit_logger import audit_log, audit_phi_access
 from app.utils.encryption import hash_email
+from sqlalchemy import func
 from app.utils.validators import validate_registration, validate_reading, validate_profile_update
 from app.utils.rate_limiter import rate_limit_login, rate_limit, registration_limiter, mfa_verify_limiter
 from app.utils.email_sender import send_verification_email, send_login_otp_email
@@ -483,7 +484,6 @@ def create_reading():
     heart_rate = int(data['heartRate']) if data.get('heartRate') is not None else None
 
     # Deduplicate: reject if identical reading exists within 60 seconds
-    from sqlalchemy import func
     window = timedelta(seconds=60)
     duplicate = BloodPressureReading.query.filter(
         BloodPressureReading.user_id == g.user_id,
