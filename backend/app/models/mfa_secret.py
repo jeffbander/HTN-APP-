@@ -4,7 +4,7 @@ MFA Secret model for storing TOTP secrets and backup codes.
 import json
 import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 from app.utils.encryption import encrypt_phi, decrypt_phi
 
@@ -60,7 +60,7 @@ class MfaSecret(db.Model):
         if code_lower in codes:
             codes.remove(code_lower)
             self.backup_codes = codes
-            self.last_used_at = datetime.utcnow()
+            self.last_used_at = datetime.now(timezone.utc)
             return True
         return False
 

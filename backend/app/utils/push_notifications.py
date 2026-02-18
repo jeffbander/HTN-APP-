@@ -100,8 +100,8 @@ def send_notification(user_id, title, body, data=None):
             success_count += 1
 
             # Update last used timestamp
-            from datetime import datetime
-            device_token.last_used_at = datetime.utcnow()
+            from datetime import datetime, timezone
+            device_token.last_used_at = datetime.now(timezone.utc)
 
         except messaging.UnregisteredError:
             # Token is no longer valid, mark as inactive

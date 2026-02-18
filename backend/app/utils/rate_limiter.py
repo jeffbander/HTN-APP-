@@ -1,7 +1,7 @@
 """
 Persistent DB-backed rate limiter for API endpoints.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify
 
@@ -16,7 +16,7 @@ class DBRateLimiter:
 
     def is_limited(self, key):
         from app.models.rate_limit_entry import RateLimitEntry
-        cutoff = datetime.utcnow() - timedelta(seconds=self.window_seconds)
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=self.window_seconds)
         count = RateLimitEntry.query.filter(
             RateLimitEntry.key == key,
             RateLimitEntry.endpoint == self.endpoint_name,
@@ -30,7 +30,7 @@ class DBRateLimiter:
         entry = RateLimitEntry(
             key=key,
             endpoint=self.endpoint_name,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         db.session.add(entry)
         db.session.commit()

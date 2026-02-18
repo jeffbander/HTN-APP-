@@ -4,7 +4,7 @@ Authentication utilities for JWT tokens.
 import os
 import secrets
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify, g
 
@@ -23,8 +23,8 @@ def generate_single_use_token(user_id: int, email: str) -> str:
         'user_id': user_id,
         'email': email,
         'jti': secrets.token_hex(16),  # Unique token ID
-        'exp': datetime.utcnow() + timedelta(seconds=expires),
-        'iat': datetime.utcnow()
+        'exp': datetime.now(timezone.utc) + timedelta(seconds=expires),
+        'iat': datetime.now(timezone.utc)
     }
 
     return jwt.encode(payload, secret, algorithm='HS256')

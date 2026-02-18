@@ -2,7 +2,7 @@
 Consumer API routes.
 """
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, g
 import pyotp
 from app import db
@@ -260,9 +260,9 @@ def verify_mfa():
             verified = True
 
     if verified:
-        mfa_session.verified_at = datetime.utcnow()
+        mfa_session.verified_at = datetime.now(timezone.utc)
         if user.mfa_secret:
-            user.mfa_secret.last_used_at = datetime.utcnow()
+            user.mfa_secret.last_used_at = datetime.now(timezone.utc)
         db.session.commit()
 
         token = generate_single_use_token(user.id, user.email)
@@ -424,13 +424,13 @@ def verify_email():
         code=code,
         used_at=None
     ).filter(
-        EmailVerification.expires_at > datetime.utcnow()
+        EmailVerification.expires_at > datetime.now(timezone.utc)
     ).first()
 
     if not verification:
         return jsonify({'error': 'Invalid or expired verification code'}), 400
 
-    verification.used_at = datetime.utcnow()
+    verification.used_at = datetime.now(timezone.utc)
     user = User.query.get(g.user_id)
     user.is_email_verified = True
     db.session.commit()

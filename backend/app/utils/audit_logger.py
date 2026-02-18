@@ -5,7 +5,7 @@ Logs all access to PHI with timestamp, user, action, and resource.
 import os
 import logging
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import request, g
 from functools import wraps
 
@@ -76,7 +76,7 @@ def audit_log(action: str, resource_type: str, resource_id: str = None,
     user_agent = request.headers.get('User-Agent', 'unknown') if request else 'unknown'
 
     log_entry = {
-        'timestamp': datetime.utcnow().isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'action': action,
         'resource_type': resource_type,
         'resource_id': resource_id,

@@ -1,5 +1,5 @@
 """Admin stats routes."""
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import jsonify
 from app import db
 from app.models import User, BloodPressureReading
@@ -20,7 +20,7 @@ def get_stats():
     flagged_users_count = User.query.filter_by(is_flagged=True).count()
     total_readings = BloodPressureReading.query.count()
 
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     readings_today = BloodPressureReading.query.filter(
         BloodPressureReading.reading_date >= today_start
     ).count()

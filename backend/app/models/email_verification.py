@@ -2,7 +2,7 @@
 Email verification model for 6-digit code-based email verification.
 """
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app import db
 
 
@@ -27,14 +27,14 @@ class EmailVerification(db.Model):
         """Expire unused codes for this user, then create a new one (15-min expiry)."""
         # Mark all existing unused codes as expired
         cls.query.filter_by(user_id=user_id, used_at=None).update(
-            {'expires_at': datetime.utcnow()}
+            {'expires_at': datetime.now(timezone.utc)}
         )
 
         code = cls.generate_code()
         verification = cls(
             user_id=user_id,
             code=code,
-            expires_at=datetime.utcnow() + timedelta(minutes=15)
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=15)
         )
         db.session.add(verification)
         db.session.commit()

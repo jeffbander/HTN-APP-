@@ -1,6 +1,6 @@
 """Admin call list routes."""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import request, jsonify, g
 from sqlalchemy import func, or_
 from app import db
@@ -27,7 +27,7 @@ def _evaluate_call_list():
     Coach: systolic 135-149 OR diastolic 80-87 (but NOT nurse-level)
     No-Reading: no readings in 30+ days (or never)
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     seven_days_ago = now - timedelta(days=7)
     thirty_days_ago = now - timedelta(days=30)
 
@@ -194,7 +194,7 @@ def get_call_list():
         users_map[u.id] = u
 
     # Get readings for all these users
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     seven_days_ago = now - timedelta(days=7)
     thirty_days_ago = now - timedelta(days=30)
 
@@ -353,7 +353,7 @@ def log_call_attempt(item_id):
             return jsonify({'error': 'Invalid follow_up_date format'}), 400
     elif follow_up_days:
         try:
-            attempt.follow_up_date = datetime.utcnow() + timedelta(days=int(follow_up_days))
+            attempt.follow_up_date = datetime.now(timezone.utc) + timedelta(days=int(follow_up_days))
         except (ValueError, TypeError):
             return jsonify({'error': 'Invalid follow_up_days value'}), 400
 
@@ -377,9 +377,9 @@ def log_call_attempt(item_id):
         if close_attempts + 1 >= AUTO_CLOSE_THRESHOLD:
             item.status = 'closed'
             item.close_reason = 'auto_closed_3_attempts'
-            item.closed_at = datetime.utcnow()
+            item.closed_at = datetime.now(timezone.utc)
             item.closed_by = g.user_id
-            item.cooldown_until = datetime.utcnow() + timedelta(days=COOLDOWN_DAYS)
+            item.cooldown_until = datetime.now(timezone.utc) + timedelta(days=COOLDOWN_DAYS)
             auto_closed = True
 
     db.session.commit()
@@ -418,7 +418,7 @@ def close_call_item(item_id):
     item.status = 'closed'
     item.close_reason = reason
     item.close_note = data.get('note', '').strip() or None
-    item.closed_at = datetime.utcnow()
+    item.closed_at = datetime.now(timezone.utc)
     item.closed_by = g.user_id
     db.session.commit()
 
@@ -451,7 +451,7 @@ def schedule_follow_up(item_id):
             return jsonify({'error': 'Invalid follow_up_date format'}), 400
     elif follow_up_days is not None:
         try:
-            item.follow_up_date = datetime.utcnow() + timedelta(days=int(follow_up_days))
+            item.follow_up_date = datetime.now(timezone.utc) + timedelta(days=int(follow_up_days))
         except (ValueError, TypeError):
             return jsonify({'error': 'Invalid follow_up_days value'}), 400
     else:
@@ -544,7 +544,7 @@ def get_call_reports():
         results.append(attempt_data)
 
     # Summary stats
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     week_ago = now - timedelta(days=7)
     total_all = CallAttempt.query.count()
     total_week = CallAttempt.query.filter(CallAttempt.created_at >= week_ago).count()

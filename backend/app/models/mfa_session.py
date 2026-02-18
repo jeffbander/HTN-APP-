@@ -2,7 +2,7 @@
 MFA Session model for pending MFA verification during login.
 """
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app import db
 
 
@@ -27,7 +27,7 @@ class MfaSession(db.Model):
         """Invalidate old sessions and create a new MFA session with 10-min expiry."""
         # Expire existing unverified sessions for this user
         cls.query.filter_by(user_id=user_id, verified_at=None).update(
-            {'expires_at': datetime.utcnow()}
+            {'expires_at': datetime.now(timezone.utc)}
         )
 
         session_token = secrets.token_hex(32)
@@ -38,7 +38,7 @@ class MfaSession(db.Model):
             session_token=session_token,
             otp_code=otp_code,
             mfa_type=mfa_type,
-            expires_at=datetime.utcnow() + timedelta(minutes=10),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
         )
         db.session.add(session)
         db.session.commit()
@@ -46,7 +46,7 @@ class MfaSession(db.Model):
 
     @property
     def is_expired(self):
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
 
     @property
     def is_verified(self):

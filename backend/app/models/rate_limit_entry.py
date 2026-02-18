@@ -1,7 +1,7 @@
 """
 Persistent rate limit entry model for DB-backed rate limiting.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app import db
 
 
@@ -21,7 +21,7 @@ class RateLimitEntry(db.Model):
     @staticmethod
     def cleanup_older_than(seconds):
         """Delete entries older than the given number of seconds."""
-        cutoff = datetime.utcnow() - timedelta(seconds=seconds)
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=seconds)
         count = RateLimitEntry.query.filter(
             RateLimitEntry.timestamp < cutoff
         ).delete()

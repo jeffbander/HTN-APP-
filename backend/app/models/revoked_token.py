@@ -1,7 +1,7 @@
 """
 Revoked token model for JWT token revocation / logout support.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -26,7 +26,7 @@ class RevokedToken(db.Model):
     def cleanup_expired():
         """Delete revoked token entries that have already expired."""
         count = RevokedToken.query.filter(
-            RevokedToken.expires_at < datetime.utcnow()
+            RevokedToken.expires_at < datetime.now(timezone.utc)
         ).delete()
         db.session.commit()
         return count

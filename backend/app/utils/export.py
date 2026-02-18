@@ -5,7 +5,7 @@ import csv
 import io
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -219,7 +219,7 @@ def generate_patient_pdf(user, readings, avg_7=None, avg_30=None):
         patient_name = f'Patient #{user.id}'
 
     elements.append(Paragraph(f"Patient Report: {patient_name}", title_style))
-    elements.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')}", normal_style))
+    elements.append(Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%B %d, %Y at %H:%M UTC')}", normal_style))
     elements.append(Spacer(1, 20))
 
     # Patient Demographics

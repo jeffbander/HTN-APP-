@@ -1,6 +1,6 @@
 """Admin cuff request routes."""
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import request, jsonify, g
 from app import db
 from app.models import User, CuffRequest
@@ -78,7 +78,7 @@ def approve_cuff_request(request_id):
 
     cuff_request.status = 'approved'
     cuff_request.approved_by = g.user_id
-    cuff_request.approved_at = datetime.utcnow()
+    cuff_request.approved_at = datetime.now(timezone.utc)
 
     if data.get('admin_notes'):
         cuff_request.admin_notes = data['admin_notes']
@@ -122,7 +122,7 @@ def ship_cuff_request(request_id):
     cuff_request.tracking_number = tracking_number
     cuff_request.carrier = data.get('carrier')
     cuff_request.shipped_by = g.user_id
-    cuff_request.shipped_at = datetime.utcnow()
+    cuff_request.shipped_at = datetime.now(timezone.utc)
 
     if data.get('admin_notes'):
         cuff_request.admin_notes = data['admin_notes']

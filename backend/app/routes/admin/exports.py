@@ -1,6 +1,6 @@
 """Admin data export routes."""
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import request, jsonify, Response
 from app import db
 from app.models import User, BloodPressureReading, CallListItem, CallAttempt
@@ -74,7 +74,7 @@ def export_users():
 
     # Filter by age if specified (requires DOB decryption)
     if age_min is not None or age_max is not None:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         filtered_users = []
         for user in users:
             try:
@@ -97,7 +97,7 @@ def export_users():
     return Response(
         csv_output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=users_export_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'}
+        headers={'Content-Disposition': f'attachment; filename=users_export_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.csv'}
     )
 
 
@@ -155,7 +155,7 @@ def export_readings():
     return Response(
         csv_output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=readings_export_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'}
+        headers={'Content-Disposition': f'attachment; filename=readings_export_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.csv'}
     )
 
 
@@ -209,7 +209,7 @@ def export_call_reports():
     return Response(
         csv_output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=call_reports_export_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'}
+        headers={'Content-Disposition': f'attachment; filename=call_reports_export_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.csv'}
     )
 
 
@@ -229,7 +229,7 @@ def export_user_pdf(user_id):
                 .all())
 
     # Calculate averages
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     seven_days_ago = now - timedelta(days=7)
     thirty_days_ago = now - timedelta(days=30)
 
@@ -264,5 +264,5 @@ def export_user_pdf(user_id):
     return Response(
         pdf_output.getvalue(),
         mimetype='application/pdf',
-        headers={'Content-Disposition': f'attachment; filename={patient_name}_report_{datetime.utcnow().strftime("%Y%m%d")}.pdf'}
+        headers={'Content-Disposition': f'attachment; filename={patient_name}_report_{datetime.now(timezone.utc).strftime("%Y%m%d")}.pdf'}
     )
