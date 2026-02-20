@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:developer' as dev;
 import 'theme/app_theme.dart';
@@ -10,6 +11,7 @@ import 'widgets/primary_button.dart';
 import 'flaskRegUsr.dart';
 import 'historyView.dart';
 import 'msg.dart';
+import 'navigationManager.dart';
 import 'utils/status_router.dart';
 import 'services/sync_service.dart';
 
@@ -49,6 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool? _hasHighBP;
   bool? _onBPMedication;
   List<String> _chronicConditions = [];
+
+  // Lifestyle questionnaire tracking
+  bool _lifestyleIncomplete = false;
 
   // Controllers for editable fields
   final _phoneController = TextEditingController();
@@ -140,6 +145,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? List<String>.from(profile['chronic_conditions'])
           : <String>[];
 
+      // Check if lifestyle questionnaire is incomplete
+      final lifestyleIncomplete = profile['exercise_days_per_week'] == null
+          && profile['stress_level'] == null;
+
       setState(() {
         _name = profile['name'] ?? '';
         _email = profile['email'] ?? '';
@@ -159,6 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _hasHighBP = hasHighBP;
         _onBPMedication = onBPMedication;
         _chronicConditions = chronicConditions;
+        _lifestyleIncomplete = lifestyleIncomplete;
         _isLoading = false;
       });
     } catch (e) {
@@ -264,8 +274,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await SyncService.instance.clearQueue();
     // Keep userEmail for autofill on next login
     if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      // Navigate through NavigationManager to preserve the root Consumer route.
+      // Using pushNamedAndRemoveUntil('/login') would destroy the root Consumer,
+      // breaking subsequent popUntil(isFirst) navigation in login/MFA flows.
+      final navManager = Provider.of<NavigationManager>(context, listen: false);
+      await navManager.navigate(ViewType.loginView);
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
+  }
+
+  void _openLifestyleQuestionnaire() {
+    Navigator.of(context).pushNamed(
+      '/lifestyle',
+      arguments: {
+        'onComplete': () {
+          Navigator.of(context).pop();
+        },
+      },
+    ).then((_) {
+      _loadProfile();
+    });
   }
 
   void _showEditDialog(String field, TextEditingController controller, {int maxLines = 1}) {
@@ -540,6 +568,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               PrimaryButton(
                                 label: _isSaving ? 'Saving...' : 'Save Changes',
                                 onPressed: _isSaving ? null : _saveProfile,
+                              ),
+                            ],
+
+                            // Lifestyle questionnaire banner
+                            if (_lifestyleIncomplete) ...[
+                              const SizedBox(height: AppTheme.spacingMd),
+                              AppCard(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.assignment_outlined,
+                                          color: AppTheme.navyBlue,
+                                          size: 24,
+                                        ),
+                                        const SizedBox(width: AppTheme.spacingSm),
+                                        Expanded(
+                                          child: Text(
+                                            'Complete Your Lifestyle Questionnaire',
+                                            style: AppTheme.titleMedium.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: AppTheme.spacingSm),
+                                    Text(
+                                      'Help us provide personalized health insights by answering a few questions about your lifestyle.',
+                                      style: AppTheme.bodyMedium.copyWith(
+                                        color: AppTheme.darkGray,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppTheme.spacingMd),
+                                    PrimaryButton(
+                                      label: 'Complete Now',
+                                      onPressed: _openLifestyleQuestionnaire,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
 
