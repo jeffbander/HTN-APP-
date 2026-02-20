@@ -87,13 +87,13 @@ class NavigationManager extends ChangeNotifier {
     for (var deviceModel in DeviceModel.values) {
       switch (deviceModel) {
         case DeviceModel.Omron:
-          supportDeviceInfo.add([deviceModel, "BP7000", "assets/omronLogo.png"]);
+          supportDeviceInfo.add([deviceModel, "Omron EVOLV", "assets/omronLogo.png"]);
           break;
         case DeviceModel.Omron3Series:
-          supportDeviceInfo.add([deviceModel, "Omron 3 Series", "assets/omronLogo.png"]);
+          supportDeviceInfo.add([deviceModel, "Omron Series 3", "assets/omronLogo.png"]);
           break;
         case DeviceModel.Omron5Series:
-          supportDeviceInfo.add([deviceModel, "Omron 5 Series", "assets/omronLogo.png"]);
+          supportDeviceInfo.add([deviceModel, "Omron Series 5", "assets/omronLogo.png"]);
           break;
         case DeviceModel.Transtek:
           supportDeviceInfo.add([deviceModel, "TMB-2296-BT", "assets/TranstekLogo.png"]);
@@ -267,6 +267,7 @@ class NavigationManager extends ChangeNotifier {
         _currentViewW = MeasurementView(
           messenger: uiMessenger,
           lastMeasurement: sourceManager.latestMeasurement,
+          isFirstReading: userStatus == 'pending_first_reading',
         );
         break;
 
@@ -329,8 +330,15 @@ class NavigationManager extends ChangeNotifier {
               }
             }
 
+            // Sync measurements from backend for this user
+            await sourceManager.syncMeasurementsFromBackend();
+
             final route = StatusRouter.routeForStatus(userStatus);
-            if (route == '/measurement') {
+            // If user has a paired device locally, go to measurement
+            // even if backend status is pending_cuff
+            final hasPairedDevice = !sourceManager.needsDeviceInfo();
+            if (route == '/measurement' ||
+                (route == '/device-selection' && hasPairedDevice)) {
               if (sourceManager.needsDeviceInfo()) {
                 await navigate(ViewType.registerDevice);
               } else {

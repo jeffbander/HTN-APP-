@@ -27,7 +27,7 @@ class DeviceInfoView extends StatefulWidget {
 
 class _DeviceInfoViewState extends State<DeviceInfoView> {
   String _deviceName = 'Omron EVOLV';
-  String _deviceModel = 'BP 7000';
+  String _deviceModel = 'Omron EVOLV';
   bool _isConnected = false;
   DateTime? _lastSyncTime;
   int _totalReadings = 0;

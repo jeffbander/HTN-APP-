@@ -75,7 +75,7 @@ class DeviceGrid extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  source.isNotEmpty ? source[0].toString() : "Unknown Device",
+                  source.length > 1 ? source[1].toString() : "Unknown Device",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
