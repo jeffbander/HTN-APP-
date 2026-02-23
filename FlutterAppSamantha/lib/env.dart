@@ -50,7 +50,7 @@ class Environment {
         }
         dev.log('[Environment] Using runtime IP: $_runtimeIp');
       } else {
-        url = "https://127.0.0.1:3001"; // Local Flask dev server
+        url = "https://10.141.23.152:3001"; // Local Flask dev server
         dev.log('[Environment] Using default localhost URL');
       }
     } else {

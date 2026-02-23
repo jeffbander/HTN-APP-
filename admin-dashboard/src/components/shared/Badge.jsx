@@ -6,6 +6,8 @@ const colorMap = {
   red: styles.red,
   blue: styles.blue,
   gray: styles.gray,
+  purple: styles.purple,
+  teal: styles.teal,
 }
 
 export default function Badge({ children, color = 'gray' }) {

@@ -97,10 +97,16 @@ class _LoginScreenState extends State<LoginScreen> {
           } catch (_) {
             // SharedPreferences may not be initialized yet; will sync on next launch
           }
+          // Sync measurements from backend for this user
+          await SourceManager.shared.syncMeasurementsFromBackend();
           // Route based on user_status
           if (mounted) {
             final targetRoute = StatusRouter.routeForStatus(userStatus);
-            if (targetRoute == '/measurement') {
+            // If user has a paired device locally, go to measurement
+            // regardless of pending_cuff status
+            final hasPairedDevice = SourceManager.shared.curDeviceID.isNotEmpty;
+            if (targetRoute == '/measurement' ||
+                (targetRoute == '/device-selection' && hasPairedDevice)) {
               final navManager = Provider.of<NavigationManager>(context, listen: false);
               navManager.userStatus = userStatus;
               navManager.showMeasurementView();

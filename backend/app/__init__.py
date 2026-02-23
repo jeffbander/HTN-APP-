@@ -66,7 +66,12 @@ def create_app(config_name=None):
 
     CORS(app, resources={
         r"/consumer/*": {"origins": origins_list},
-        r"/admin/*": {"origins": origins_list}
+        r"/admin/*": {"origins": origins_list},
+        r"/dashboard/*": {"origins": origins_list},
+        r"/super-admin/*": {"origins": origins_list},
+        r"/union-leader/*": {"origins": origins_list},
+        r"/shipping/*": {"origins": origins_list},
+        r"/nurse/*": {"origins": origins_list},
     })
 
     # Redirect HTTP to HTTPS in production
@@ -109,9 +114,19 @@ def create_app(config_name=None):
     # Register blueprints
     from app.routes.consumer import consumer_bp
     from app.routes.admin import admin_bp
+    from app.routes.dashboard_auth import dashboard_auth_bp
+    from app.routes.super_admin import super_admin_bp
+    from app.routes.union_leader import union_leader_bp
+    from app.routes.shipping import shipping_bp
+    from app.routes.nurse_coach import nurse_bp
 
     app.register_blueprint(consumer_bp, url_prefix='/consumer')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(dashboard_auth_bp, url_prefix='/dashboard')
+    app.register_blueprint(super_admin_bp, url_prefix='/super-admin')
+    app.register_blueprint(union_leader_bp, url_prefix='/union-leader')
+    app.register_blueprint(shipping_bp, url_prefix='/shipping')
+    app.register_blueprint(nurse_bp, url_prefix='/nurse')
 
     # Health check endpoint
     @app.route('/health')

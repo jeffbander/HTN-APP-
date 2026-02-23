@@ -1,15 +1,15 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import styles from './Login.module.css'
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth()
+  const { login, resetAuth } = useAuth()
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+  // Clear any stale session when visiting login page
+  useEffect(() => { resetAuth() }, [resetAuth])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -49,7 +49,7 @@ export default function Login() {
         <button className={styles.loginBtn} type="submit" disabled={loading}>
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
-        <p className={styles.footer}>A verification link will be sent to your email</p>
+        <p className={styles.footer}>You will be prompted for MFA verification</p>
       </form>
     </div>
   )

@@ -51,6 +51,7 @@ export default function PatientDetail() {
   const [totalReadings, setTotalReadings] = useState(0)
   const [noteText, setNoteText] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [flagModal, setFlagModal] = useState(false)
   const [expandedAttempts, setExpandedAttempts] = useState({})
   const readingLimit = 8
@@ -88,8 +89,9 @@ export default function PatientDetail() {
       } catch {
         setCallHistory([])
       }
-    } catch {
-      // fail gracefully
+    } catch (err) {
+      console.error('PatientDetail loadData error:', err)
+      setError(err.message || 'Failed to load patient data')
     } finally {
       setLoading(false)
     }
@@ -172,7 +174,7 @@ export default function PatientDetail() {
   }
 
   if (loading) return <><Header title="Patient Detail" backLink="/users" backLabel="Back to Users" /><div className={styles.loading}>Loading...</div></>
-  if (!user) return <><Header title="Patient Detail" backLink="/users" backLabel="Back to Users" /><div className={styles.loading}>User not found</div></>
+  if (!user) return <><Header title="Patient Detail" backLink="/users" backLabel="Back to Users" /><div className={styles.loading}>{error || 'User not found'}</div></>
 
   const latest = readings[0]
   const latestCat = latest ? classifyBP(latest.systolic, latest.diastolic) : null

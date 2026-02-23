@@ -15,7 +15,7 @@ class EmailVerification(db.Model):
     code = db.Column(db.String(6), nullable=False)
     expires_at = db.Column(db.DateTime, nullable=False)
     used_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     @staticmethod
     def generate_code():
@@ -37,7 +37,7 @@ class EmailVerification(db.Model):
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=15)
         )
         db.session.add(verification)
-        db.session.commit()
+        db.session.flush()
         return verification
 
     def __repr__(self):

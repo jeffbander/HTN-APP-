@@ -193,13 +193,6 @@ class _PairingScreenState extends State<PairingScreen>
                 _discoveredDevices.add(device);
                 _isSearching = false;
                 _deviceFound = true;
-                // Use the first device found
-                if (_selectedDevice == null) {
-                  _selectedDevice = device;
-                  _deviceName = device.platformName.isNotEmpty
-                      ? device.platformName
-                      : 'Omron BP Monitor';
-                }
               });
             }
           }
@@ -294,6 +287,10 @@ class _PairingScreenState extends State<PairingScreen>
     });
 
     try {
+      // Stop any ongoing scan before starting pairing to avoid
+      // concurrent BLE operations that can interfere on iOS
+      await _sourceManager.cancelPairing();
+
       // Set up the source object and trigger pairing
       _sourceManager.curSrcObj = BluetoothSource(peripheral: _selectedDevice);
       dev.log('PAIRING SCREEN: calling startPairing...');
@@ -310,22 +307,20 @@ class _PairingScreenState extends State<PairingScreen>
   }
 
   void _navigateToHome() async {
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      // Update stored user status since they've paired a device
-      const storage = FlutterSecureStorage();
-      await storage.write(key: 'user_status', value: 'active');
+    // Small delay for the "Paired Successfully!" message to be visible
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
 
-      // Update NavigationManager state before navigating
-      final navManager = Provider.of<NavigationManager>(context, listen: false);
-      navManager.userStatus = 'active';
-      navManager.showMeasurementView();
-      // Navigate to measurement, clearing the entire stack
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/measurement',
-        (route) => false,
-      );
-    }
+    // Update stored user status since they've paired a device
+    const storage = FlutterSecureStorage();
+    await storage.write(key: 'user_status', value: 'active');
+
+    // Update NavigationManager state before navigating
+    final navManager = Provider.of<NavigationManager>(context, listen: false);
+    navManager.userStatus = 'active';
+    navManager.showMeasurementView();
+    // Pop back to root where NavigationManager Consumer shows the measurement view
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -396,7 +391,7 @@ class _PairingScreenState extends State<PairingScreen>
                             : _isPairing
                                 ? 'Pairing...'
                                 : _deviceFound
-                                    ? 'Device Found'
+                                    ? '${_discoveredDevices.length} Device${_discoveredDevices.length > 1 ? 's' : ''} Found'
                                     : 'Searching for devices...',
                     style: AppTheme.headlineLarge,
                     textAlign: TextAlign.center,
@@ -442,61 +437,87 @@ class _PairingScreenState extends State<PairingScreen>
                     ),
                   ],
                   const SizedBox(height: AppTheme.spacingXl),
-                  // Device Card
+                  // Device List
                   if (_deviceFound && !_pairingComplete)
-                    AppCard(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(AppTheme.spacingMd),
-                            decoration: BoxDecoration(
-                              color: AppTheme.navyBlue.withOpacity(0.1),
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.radiusMd),
-                            ),
-                            child: const Icon(
-                              Icons.bluetooth,
-                              color: AppTheme.navyBlue,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: AppTheme.spacingMd),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    ..._discoveredDevices.map((device) {
+                      final name = device.platformName.isNotEmpty
+                          ? device.platformName
+                          : device.remoteId.toString();
+                      final isSelected = _selectedDevice?.remoteId == device.remoteId;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+                        child: GestureDetector(
+                          onTap: _isPairing ? null : () {
+                            setState(() {
+                              _selectedDevice = device;
+                              _deviceName = name;
+                            });
+                          },
+                          child: AppCard(
+                            child: Row(
                               children: [
-                                Text(
-                                  _deviceName ?? 'Unknown Device',
-                                  style: AppTheme.titleLarge,
-                                ),
-                                const SizedBox(height: AppTheme.spacingXs),
-                                Text(
-                                  'Ready to pair',
-                                  style: AppTheme.bodyMedium.copyWith(
-                                    color: AppTheme.accentGreen,
+                                Container(
+                                  padding: const EdgeInsets.all(AppTheme.spacingMd),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppTheme.navyBlue.withOpacity(0.1)
+                                        : AppTheme.lightGray,
+                                    borderRadius:
+                                        BorderRadius.circular(AppTheme.radiusMd),
+                                  ),
+                                  child: Icon(
+                                    Icons.bluetooth,
+                                    color: isSelected ? AppTheme.navyBlue : AppTheme.mediumGray,
+                                    size: 32,
                                   ),
                                 ),
+                                const SizedBox(width: AppTheme.spacingMd),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: AppTheme.titleLarge,
+                                      ),
+                                      const SizedBox(height: AppTheme.spacingXs),
+                                      Text(
+                                        isSelected ? 'Selected' : 'Tap to select',
+                                        style: AppTheme.bodyMedium.copyWith(
+                                          color: isSelected ? AppTheme.accentGreen : AppTheme.mediumGray,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: AppTheme.accentGreen,
+                                  )
+                                else
+                                  const Icon(
+                                    Icons.radio_button_unchecked,
+                                    color: AppTheme.mediumGray,
+                                  ),
+                                if (_isPairing && isSelected) ...[
+                                  const SizedBox(width: AppTheme.spacingSm),
+                                  const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          AppTheme.navyBlue),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
-                          if (!_isPairing)
-                            const Icon(
-                              Icons.chevron_right,
-                              color: AppTheme.mediumGray,
-                            ),
-                          if (_isPairing)
-                            const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppTheme.navyBlue),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    }),
                   if (_pairingComplete) ...[
                     AppCard(
                       child: Column(
@@ -563,8 +584,8 @@ class _PairingScreenState extends State<PairingScreen>
               child: Padding(
                 padding: const EdgeInsets.all(AppTheme.spacingMd),
                 child: PrimaryButton(
-                  label: 'Pair Device',
-                  onPressed: _pairDevice,
+                  label: _selectedDevice != null ? 'Pair Device' : 'Select a Device',
+                  onPressed: _selectedDevice != null ? _pairDevice : null,
                 ),
               ),
             ),

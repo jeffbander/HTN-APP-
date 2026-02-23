@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'msg.dart';
+import 'theme/app_theme.dart';
 
 class IdleMeasureView extends StatefulWidget {
   final BaseMessenger messenger;
@@ -12,21 +13,21 @@ class IdleMeasureView extends StatefulWidget {
 }
 
 class _IdleMeasureViewState extends State<IdleMeasureView> {
-  double firstImageOpacity = 1.0;
-  double secondImageOpacity = 0.0;
+  double instructionOpacity = 1.0;
+  double beachOpacity = 0.0;
   bool measurementFound = false;
 
   @override
   void initState() {
     super.initState();
-    dev.log("IdleMeasureView appeared. Displaying first image...");
+    dev.log("IdleMeasureView appeared. Displaying instructions...");
 
-    // Start second image fade-in after 5 seconds (palm tree animation)
+    // Fade to beach animation after 5 seconds (proxy for cuff starting)
     Future.delayed(const Duration(seconds: 5), () {
       if (!measurementFound && mounted) {
         setState(() {
-          firstImageOpacity = 0.0;
-          secondImageOpacity = 1.0;
+          instructionOpacity = 0.0;
+          beachOpacity = 1.0;
         });
       }
     });
@@ -64,7 +65,6 @@ class _IdleMeasureViewState extends State<IdleMeasureView> {
 
   @override
   Widget build(BuildContext context) {
-    // Get screen size for the second image
     double screenHeight = MediaQuery.of(context).size.height;
     double screenWidth = MediaQuery.of(context).size.width;
 
@@ -72,100 +72,120 @@ class _IdleMeasureViewState extends State<IdleMeasureView> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // First image: SafeArea applied only here
+          // Instruction screen: "Press Start on cuff" + Quick Tips
           AnimatedOpacity(
-            opacity: firstImageOpacity,
+            opacity: instructionOpacity,
             duration: const Duration(seconds: 2),
             child: SafeArea(
-              child: Container(
+              child: SizedBox(
                 width: screenWidth,
                 height: screenHeight,
-                color: Colors.white, // White screen for the first phase
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/UsingCuff.png',  // First image to be shown initially
-                      width: 300,
-                      height: 300,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: RichText(
-                          textAlign: TextAlign.left,
-                          text: TextSpan(
-                            style: TextStyle(fontSize: 16, color: Colors.black),
-                            children: [
-                              TextSpan(text: '\n\n\nPress '),
-                              TextSpan(
-                                text: 'Start/Stop',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              TextSpan(text: ' button on the cuff \n\n\n'),
-                              TextSpan(text: '• Sit upright, back supported, feet flat \n'),
-                              TextSpan(text: '• Arm at heart level, cuff on bare arm \n'),
-                              TextSpan(text: '• Stay still, no talking or movement'),
-                            ],
-                          ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 40),
+                      // Main instruction
+                      Icon(
+                        Icons.play_circle_fill,
+                        size: 56,
+                        color: AppTheme.navyBlue,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Press the Start button\non your cuff',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.navyBlue,
+                          height: 1.3,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      // Positioning tips
+                      _buildInstructionRow(Icons.event_seat, 'Sit upright, back supported, feet flat'),
+                      _buildInstructionRow(Icons.favorite_border, 'Arm at heart level, cuff on bare arm'),
+                      _buildInstructionRow(Icons.do_not_touch, 'Stay still, no talking or movement'),
+                      const SizedBox(height: 20),
+                      Divider(color: AppTheme.lightGray),
+                      const SizedBox(height: 20),
+                      // Quick Tips section
+                      Row(
+                        children: [
+                          Icon(Icons.lightbulb_outline, color: AppTheme.warning, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Quick Tips',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTipRow(Icons.no_drinks, 'Avoid caffeine for 30 minutes before'),
+                      _buildTipRow(Icons.directions_run, 'Don\'t measure right after exercise'),
+                      _buildTipRow(Icons.wc, 'Empty your bladder before measuring'),
+                      _buildTipRow(Icons.schedule, 'Take readings at the same time daily'),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          
-          // Second image: Full screen with no SafeArea, positioned behind the other elements
+
+          // Beach animation: full screen
           AnimatedOpacity(
-            opacity: secondImageOpacity,
+            opacity: beachOpacity,
             duration: const Duration(seconds: 2),
             child: SizedBox(
-              width: screenWidth, // Full screen width
-              height: screenHeight, // Full screen height
+              width: screenWidth,
+              height: screenHeight,
               child: Image.asset(
-                'assets/Beach.gif', // Loading GIF from assets
+                'assets/Beach.gif',
                 width: screenWidth,
                 height: screenHeight,
-                fit: BoxFit.cover, // Ensure the image covers the full screen
+                fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Center(child: Text("Failed to load image."));
                 },
               ),
             ),
           ),
-          
-          // White text on the second image, only appear after second image fades in
-          if (secondImageOpacity > 0)
+
+          // White text on the beach animation
+          if (beachOpacity > 0)
             Positioned(
-              top: screenHeight * 0.35,  // Adjust top positioning to center the text
+              top: screenHeight * 0.35,
               left: 0,
               right: 0,
               child: Center(
                 child: Text(
                   'Measurement in Progress... \n\n\n\n\n\nWait for measurement to complete. The results will appear on the screen.',
                   style: TextStyle(
-                    fontSize: 24,  // Set font size as needed
-                    fontWeight: FontWeight.bold,  // Bold font
-                    color: Colors.white,  // White text color
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                     shadows: [
                       Shadow(
                         offset: Offset(2.0, 2.0),
                         blurRadius: 3.0,
                         color: Colors.black.withOpacity(0.5),
                       ),
-                    ], // Optional: Add shadow to make text stand out on the image
+                    ],
                   ),
-                  textAlign: TextAlign.center,  // Center the text horizontally
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
-          
-          // Bottom-centered cancel button with rounded edges
+
+          // Bottom-centered cancel button
           Positioned(
-            bottom: MediaQuery.of(context).padding.bottom + 30, // Above safe area
+            bottom: MediaQuery.of(context).padding.bottom + 30,
             left: screenWidth * 0.15,
             right: screenWidth * 0.15,
             child: GestureDetector(
@@ -192,6 +212,42 @@ class _IdleMeasureViewState extends State<IdleMeasureView> {
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 22, color: AppTheme.navyBlue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTipRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, size: 16, color: AppTheme.accentGreen),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 15, color: Colors.black87),
             ),
           ),
         ],

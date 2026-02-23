@@ -419,12 +419,13 @@ def verify_email():
     if len(code) != 6 or not code.isdigit():
         return jsonify({'error': 'Invalid verification code format'}), 400
 
+    now = datetime.now(timezone.utc)
     verification = EmailVerification.query.filter_by(
         user_id=g.user_id,
         code=code,
         used_at=None
     ).filter(
-        EmailVerification.expires_at > datetime.now(timezone.utc)
+        EmailVerification.expires_at > now.replace(tzinfo=None)
     ).first()
 
     if not verification:
@@ -453,6 +454,7 @@ def resend_verification():
         return jsonify({'error': 'Email is already verified'}), 409
 
     verification = EmailVerification.create_for_user(user.id)
+    db.session.commit()
     send_verification_email(user.email, verification.code)
 
     audit_log('UPDATE', 'user', resource_id=str(g.user_id),

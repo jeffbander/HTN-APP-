@@ -12,3 +12,6 @@ from .cuff_request import CuffRequest
 from .device_token import DeviceToken
 from .mfa_secret import MfaSecret
 from .mfa_session import MfaSession
+from .dashboard_user import DashboardUser
+from .dashboard_mfa_secret import DashboardMfaSecret
+from .dashboard_mfa_session import DashboardMfaSession

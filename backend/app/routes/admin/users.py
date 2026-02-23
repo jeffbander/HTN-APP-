@@ -87,7 +87,7 @@ def _paginate_and_search(query, search, page, per_page):
 @admin_required
 def tab_counts():
     """Return user counts for each dashboard tab."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=240)  # 8 months
+    cutoff = datetime.utcnow() - timedelta(days=240)  # 8 months
     last_reading = _last_reading_subquery()
 
     active_count = (
@@ -134,7 +134,7 @@ def tab_counts():
 @admin_required
 def tab_users(tab_name):
     """Return paginated users for a specific dashboard tab."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=240)
+    cutoff = datetime.utcnow() - timedelta(days=240)
     last_reading = _last_reading_subquery()
     args = request.args
 
@@ -379,7 +379,7 @@ def get_user(id):
     total_readings = len(readings)
     latest = readings[0].to_dict() if readings else None
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     seven_days_ago = now - timedelta(days=7)
     thirty_days_ago = now - timedelta(days=30)
 

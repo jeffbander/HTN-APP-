@@ -535,6 +535,50 @@ class SourceManager extends ChangeNotifier {
   }
 
   //------------------------------------------------------
+  /// Fetch this user's readings from the backend and sync into local cache.
+  /// Call after login / MFA verify so recent-measurements are up to date.
+  Future<void> syncMeasurementsFromBackend() async {
+    try {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'auth_token');
+      if (token == null) return;
+
+      final api = FlaskRegUsr();
+      final readings = await api.getReadings(token);
+      if (readings == null || readings.isEmpty) {
+        // Clear stale local data from a different account
+        sharedMeasurements = [];
+        await sharedPrefs.setStringList('measurements', []);
+        dev.log('🔹 No backend readings — cleared local measurements');
+        return;
+      }
+
+      final localEntries = <String>[];
+      final parsed = <Map<DateTime, List<int>>>[];
+      for (final r in readings) {
+        final dateStr = r['reading_date'] as String?;
+        if (dateStr == null) continue;
+        final date = DateTime.tryParse(dateStr);
+        if (date == null) continue;
+        final values = [
+          r['systolic'] as int? ?? 0,
+          r['diastolic'] as int? ?? 0,
+          r['heart_rate'] as int? ?? 0,
+        ];
+        localEntries.add(jsonEncode({'date': date.toIso8601String(), 'values': values}));
+        parsed.add({date: values});
+      }
+
+      parsed.sort((a, b) => b.keys.first.compareTo(a.keys.first));
+      sharedMeasurements = parsed;
+      await sharedPrefs.setStringList('measurements', localEntries);
+      dev.log('🔹 Synced ${parsed.length} measurements from backend');
+    } catch (e) {
+      dev.log('⚠️ syncMeasurementsFromBackend error: $e');
+    }
+  }
+
+  //------------------------------------------------------
   Future<void> uploadMeasurements() async {
     dev.log("uploadMeasurements called");
 

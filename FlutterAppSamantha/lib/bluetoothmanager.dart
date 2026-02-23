@@ -16,6 +16,7 @@ class BluetoothManager
 
     static final bloodPressureServiceUUID        = Guid("00001810-0000-1000-8000-00805f9b34fb");
     static final bloodPressureCharacteristicUUID = Guid("00002A35-0000-1000-8000-00805f9b34fb");
+    static final racpCharacteristicUUID          = Guid("00002A52-0000-1000-8000-00805f9b34fb");
 
     static const String Omron_BT_STR             = "BP7000";
     static const String Omron3Series_BT_STR      = "BLESmart_";  // Omron 3 Series (BP7150)
@@ -32,6 +33,7 @@ class BluetoothManager
 
 
     StreamSubscription? scanSubscription;
+    final Set<String> _discoveredDeviceIds = {};
 
     String peripheralName = "";
     BluetoothSource? theSource;
@@ -152,6 +154,7 @@ class BluetoothManager
     Future<void> startScan () async
     {
       dev.log('BT: === STARTING BLUETOOTH SCAN ===');
+      _discoveredDeviceIds.clear();
       final completer = Completer<void>();
 
       try
@@ -175,6 +178,7 @@ class BluetoothManager
         // Start scanning — do NOT filter by service UUID because many Omron
         // devices (BP7250 / 5 Series) don't advertise the Blood Pressure
         // Service UUID in their advertisement packets.
+        // Scan for full 15 seconds to discover ALL nearby Omron devices.
         await FlutterBluePlus.startScan(timeout: Duration(seconds: 15));
         dev.log('BT: Scan started successfully, listening for results...');
 
@@ -182,15 +186,7 @@ class BluetoothManager
           (results) async
           {
             dev.log('BT: Scan callback: ${results.length} result(s)');
-            await handleScanResults(results, completer);
-          },
-          onDone: () async
-          {
-            dev.log('BT: Scan stream onDone fired.');
-            if (!completer.isCompleted)
-            {
-              await finalizeScan(completer);
-            }
+            await handleScanResults(results);
           },
           onError: (error)
           {
@@ -199,7 +195,9 @@ class BluetoothManager
           },
         );
 
-        // Wait for the scan results to be handled
+        // Wait for the full scan duration (15s timeout set above)
+        await Future.delayed(const Duration(seconds: 16));
+        await finalizeScan(completer);
         await completer.future;
       }
       catch (e)
@@ -213,19 +211,21 @@ class BluetoothManager
       }
     }
 
-    Future<void> handleScanResults (List<ScanResult> results, Completer<void> completer) async
+    Future<void> handleScanResults (List<ScanResult> results) async
     {
       for (var result in results)
       {
         final deviceName = result.device.platformName;
         final advName = result.advertisementData.advName;
-        final serviceUuids = result.advertisementData.serviceUuids;
-        dev.log('BT: Device found: name="$deviceName" advName="$advName" '
-            'rssi=${result.rssi} services=$serviceUuids');
 
-        // Skip devices with no name — these are unknown random BLE devices
+        // Skip devices with no name
         if (deviceName.isEmpty && advName.isEmpty) {
-          dev.log('BT: Skipping unnamed device');
+          continue;
+        }
+
+        // Skip already-discovered devices (scanResults is cumulative)
+        final deviceId = result.device.remoteId.toString();
+        if (_discoveredDeviceIds.contains(deviceId)) {
           continue;
         }
 
@@ -246,14 +246,13 @@ class BluetoothManager
                               upperAdvName.contains('HEM7');
 
         if (!isOmronDevice) {
-          dev.log('BT: Skipping non-Omron device: $deviceName');
           continue;
         }
 
-        dev.log('BT: MATCHED Omron device: name="$deviceName" advName="$advName"');
+        _discoveredDeviceIds.add(deviceId);
+        dev.log('BT: MATCHED Omron device: name="$deviceName" advName="$advName" id=$deviceId');
 
         final peripheral = result.device;
-        // Use platform name if available, otherwise use remote ID
         peripheralName = peripheral.platformName.isNotEmpty
             ? peripheral.platformName
             : peripheral.remoteId.toString();
@@ -261,7 +260,7 @@ class BluetoothManager
         theSource = BluetoothSource(peripheral: peripheral);
         theSource?.sourceName = peripheralName;
 
-         // Send the message for the discovered peripheral
+        // Send discovery message for each Omron device found
         await messenger.sendMsg(msglib.Msg(
           deviceType: msglib.DeviceType.Phone,
           taskType: msglib.TaskType.DiscoverSource,
@@ -269,10 +268,6 @@ class BluetoothManager
           sender: [msglib.ComponentType.BTManager],
           source: theSource,
         ));
-
-        // Complete the completer after sending the message
-        if (!completer.isCompleted) completer.complete();
-        break;
       }
     }
 
@@ -305,10 +300,11 @@ class BluetoothManager
     }
 
 
-    Future<void> stopScan() async 
+    Future<void> stopScan() async
     {
         dev.log('Stopping Bluetooth scan...');
         await scanSubscription?.cancel();
+        await FlutterBluePlus.stopScan();
     }
 
     Future<void> pairDevice (BluetoothDevice device) async 
@@ -367,10 +363,11 @@ class PairingManager
                 dev.log('iOS: Bond will be triggered automatically by characteristic access');
             }
 
-            // Discover services to verify BP service exists
+            // Discover services — try twice because iOS may not reveal
+            // all services until bonding completes (which is triggered
+            // by accessing an encrypted characteristic).
             List<BluetoothService> services = await device.discoverServices();
             dev.log('PAIR: Discovered ${services.length} services');
-            dev.log('Discovered ${services.length} services');
 
             bool foundBpService = false;
             for (BluetoothService service in services)
@@ -383,10 +380,28 @@ class PairingManager
                 }
             }
 
+            // If BP service not found on first try, wait for bond
+            // to settle and retry service discovery once.
             if (!foundBpService) {
-                dev.log('PAIR: WARNING - BP service not found!');
-                dev.log('WARNING: Blood Pressure Service (0x1810) not found on device. '
-                    'Found services: ${services.map((s) => s.uuid).toList()}', level: 900);
+                dev.log('PAIR: BP service not found on first discovery, retrying after delay...');
+                await Future.delayed(const Duration(seconds: 3));
+                services = await device.discoverServices();
+                dev.log('PAIR: Retry discovered ${services.length} services');
+                for (BluetoothService service in services)
+                {
+                    dev.log('Retry Service: ${service.uuid}');
+                    if (service.uuid == BluetoothManager.bloodPressureServiceUUID)
+                    {
+                        foundBpService = true;
+                        await handlePairingCharacteristicDiscovery (service);
+                    }
+                }
+            }
+
+            if (!foundBpService) {
+                dev.log('PAIR: BP service not found, but proceeding — '
+                    'measurement flow will discover services independently. '
+                    'Found services: ${services.map((s) => s.uuid).toList()}');
             }
 
             dev.log('PAIR: SUCCESS');
@@ -562,23 +577,34 @@ class MeasurementManager
 
   Future<void> handleMeasurementCharacteristicDiscovery(BluetoothService service) async
   {
+    BluetoothCharacteristic? bpCharacteristic;
+    BluetoothCharacteristic? racpCharacteristic;
+
     for (BluetoothCharacteristic characteristic in service.characteristics)
     {
-      if (characteristic.uuid == BluetoothManager.bloodPressureCharacteristicUUID)
-      {
-          dev.log('Found measurement characteristic: ${characteristic.uuid}');
-
-          // FIXED: Enable notifications FIRST so we're ready to receive data
-          await enableNotifications(characteristic);
-
-          // Wait for device to configure notifications
-          dev.log('Waiting 2 seconds for device to be ready...');
-          await Future.delayed(const Duration(seconds: 2));
-          dev.log('2-second delay complete');
-
-          // THEN write command to request measurement
-          await requestMeasurement(characteristic);
+      dev.log('  Measurement char: ${characteristic.uuid} props: ${characteristic.properties}');
+      if (characteristic.uuid == BluetoothManager.bloodPressureCharacteristicUUID) {
+        bpCharacteristic = characteristic;
       }
+      if (characteristic.uuid == BluetoothManager.racpCharacteristicUUID) {
+        racpCharacteristic = characteristic;
+      }
+    }
+
+    if (bpCharacteristic != null) {
+      dev.log('Found BP measurement characteristic');
+      await enableNotifications(bpCharacteristic);
+    }
+
+    if (racpCharacteristic != null) {
+      dev.log('Found RACP characteristic — enabling indications and requesting stored records');
+      await enableNotifications(racpCharacteristic);
+      await Future.delayed(const Duration(seconds: 1));
+      await requestStoredRecords(racpCharacteristic);
+    } else if (bpCharacteristic != null) {
+      // Fallback: some devices send data automatically when indications are enabled
+      dev.log('No RACP characteristic found — waiting for automatic data transfer');
+      await Future.delayed(const Duration(seconds: 5));
     }
   }
 
@@ -595,8 +621,8 @@ class MeasurementManager
       // Listen to the characteristic's value changes
       characteristic.lastValueStream.listen(
           (data) => handleCharacteristicData(characteristic, data),
-          onError: (error) => log('Error in characteristic value stream: $error', level: 1000),
-          onDone: () => log('Characteristic value stream completed.'),
+          onError: (error) => dev.log('Error in characteristic value stream: $error', level: 1000),
+          onDone: () => dev.log('Characteristic value stream completed.'),
       );
     } catch (e) 
     {
@@ -614,16 +640,17 @@ class MeasurementManager
     }
   }
 
-  Future<void> requestMeasurement(BluetoothCharacteristic characteristic) async {
+  Future<void> requestStoredRecords(BluetoothCharacteristic racpCharacteristic) async {
       try {
-          // Command to start measurement (adjust based on device specifications)
-          List<int> command = [0x02]; 
+          // RACP "Report All Stored Records" command
+          // Opcode 0x01 = Report stored records, Operator 0x01 = All records
+          List<int> command = [0x01, 0x01];
 
-          dev.log('Sending measurement request command: $command');
-          await characteristic.write(command, withoutResponse: false);
-          dev.log('Measurement request sent successfully');
+          dev.log('Sending RACP "Report All Stored Records" command: $command');
+          await racpCharacteristic.write(command, withoutResponse: false);
+          dev.log('RACP command sent successfully — waiting for stored measurements...');
       } catch (e) {
-          dev.log('Failed to send measurement request: $e', level: 1000);
+          dev.log('Failed to send RACP command: $e', level: 1000);
       }
   }
 

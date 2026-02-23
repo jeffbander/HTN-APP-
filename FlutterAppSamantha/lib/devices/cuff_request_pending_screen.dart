@@ -341,23 +341,35 @@ class _CuffRequestPendingScreenState extends State<CuffRequestPendingScreen> {
                     ),
                   ),
           ),
-          if (_status == 'delivered' || _status == 'received')
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.all(AppTheme.spacingMd),
-                child: PrimaryButton(
-                  label: 'Start Taking Readings',
-                  variant: ButtonVariant.navy,
-                  onPressed: () {
-                    // Cuff received — route to measurement (pending_first_reading)
-                    Navigator.of(context).pushReplacementNamed(
-                      StatusRouter.routeForStatus('pending_first_reading'),
-                    );
-                  },
-                ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.spacingMd),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_status == 'delivered' || _status == 'received')
+                    PrimaryButton(
+                      label: 'Start Taking Readings',
+                      variant: ButtonVariant.navy,
+                      onPressed: () {
+                        Navigator.of(context).pushReplacementNamed(
+                          StatusRouter.routeForStatus('pending_first_reading'),
+                        );
+                      },
+                    ),
+                  if (_status != 'delivered' && _status != 'received') ...[
+                    PrimaryButton(
+                      label: 'I Already Have a Cuff',
+                      onPressed: () {
+                        Navigator.of(context).pushReplacementNamed('/pairing');
+                      },
+                    ),
+                  ],
+                ],
               ),
             ),
+          ),
         ],
       ),
     );

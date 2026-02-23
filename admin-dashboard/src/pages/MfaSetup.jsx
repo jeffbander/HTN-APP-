@@ -4,18 +4,18 @@ import { useAuth } from '../context/AuthContext'
 import styles from './Login.module.css'
 
 export default function MfaSetup() {
-  const { setupMfa, confirmMfaSetup, mfaSetupRequired, isAuthenticated } = useAuth()
+  const { setupMfa, confirmMfaSetup, finishMfaSetup, mfaSetupRequired, isAuthenticated } = useAuth()
   const [step, setStep] = useState(1) // 1=QR, 2=verify, 3=backup codes
   const [setupData, setSetupData] = useState(null)
+  const [backupCodes, setBackupCodes] = useState(null)
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const canvasRef = useRef(null)
 
-  if (!isAuthenticated && !mfaSetupRequired) return <Navigate to="/login" replace />
-  if (!mfaSetupRequired) return <Navigate to="/dashboard" replace />
-
+  // All hooks MUST be above any early returns
   useEffect(() => {
+    if (!mfaSetupRequired) return
     const initSetup = async () => {
       setLoading(true)
       try {
@@ -28,7 +28,7 @@ export default function MfaSetup() {
       }
     }
     initSetup()
-  }, [setupMfa])
+  }, [setupMfa, mfaSetupRequired])
 
   useEffect(() => {
     if (setupData?.provisioning_uri && canvasRef.current) {
@@ -43,15 +43,23 @@ export default function MfaSetup() {
     }
   }, [setupData])
 
+  // Early returns AFTER hooks
+  if (!isAuthenticated && !mfaSetupRequired) return <Navigate to="/login" replace />
+  if (!mfaSetupRequired) return <Navigate to="/dashboard" replace />
+
   const handleVerify = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await confirmMfaSetup(code)
+      const data = await confirmMfaSetup(code)
+      if (data?.backup_codes) {
+        setBackupCodes(data.backup_codes)
+      }
       setStep(3)
     } catch (err) {
       setError(err.message || 'Invalid code')
+    } finally {
       setLoading(false)
     }
   }
@@ -136,42 +144,46 @@ export default function MfaSetup() {
           </form>
         )}
 
-        {step === 3 && setupData && (
+        {step === 3 && (
           <>
             <p className={styles.subtitle}>
-              Save these backup codes in a secure location. Each code can only be used once.
+              MFA is now enabled! {backupCodes ? 'Save these backup codes in a secure location. Each code can only be used once.' : 'You can now log in with your authenticator app.'}
             </p>
-            <div style={{
-              background: '#f5f5f5',
-              padding: '16px',
-              borderRadius: '8px',
-              margin: '16px 0',
-              fontFamily: 'monospace',
-              fontSize: '14px',
-              lineHeight: '2',
-              textAlign: 'center',
-            }}>
-              {setupData.backup_codes.map((c, i) => (
-                <div key={i}>{c}</div>
-              ))}
-            </div>
+            {backupCodes && (
+              <>
+                <div style={{
+                  background: '#f5f5f5',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  margin: '16px 0',
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  lineHeight: '2',
+                  textAlign: 'center',
+                }}>
+                  {backupCodes.map((c, i) => (
+                    <div key={i}>{c}</div>
+                  ))}
+                </div>
+                <button
+                  className={styles.loginBtn}
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(backupCodes.join('\n'))
+                  }}
+                  style={{ marginBottom: '12px' }}
+                >
+                  Copy Codes
+                </button>
+              </>
+            )}
             <button
               className={styles.loginBtn}
               type="button"
-              onClick={() => {
-                navigator.clipboard?.writeText(setupData.backup_codes.join('\n'))
-              }}
-              style={{ marginBottom: '12px' }}
-            >
-              Copy Codes
-            </button>
-            <button
-              className={styles.loginBtn}
-              type="button"
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={finishMfaSetup}
               style={{ background: '#28a745' }}
             >
-              Done
+              Done — Log In
             </button>
           </>
         )}

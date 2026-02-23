@@ -18,7 +18,7 @@ class MfaSession(db.Model):
     attempts = db.Column(db.Integer, default=0)
     expires_at = db.Column(db.DateTime, nullable=False)
     verified_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = db.relationship('User', backref='mfa_sessions')
 
@@ -46,7 +46,12 @@ class MfaSession(db.Model):
 
     @property
     def is_expired(self):
-        return datetime.now(timezone.utc) > self.expires_at
+        now = datetime.now(timezone.utc)
+        expires = self.expires_at
+        # SQLite stores datetimes without timezone info; treat as UTC
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return now > expires
 
     @property
     def is_verified(self):

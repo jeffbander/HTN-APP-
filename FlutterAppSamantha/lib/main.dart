@@ -129,10 +129,11 @@ class MyApp extends StatelessWidget {
         // Handle routes with arguments
         if (settings.name == '/mfa-verify') {
           final args = settings.arguments as Map<String, dynamic>?;
-          if (args == null) return null;
+          final token = args?['mfa_session_token'] as String?;
+          if (args == null || token == null) return null;
           return MaterialPageRoute(
             builder: (context) => MfaVerifyScreen(
-              mfaSessionToken: args['mfa_session_token'] as String,
+              mfaSessionToken: token,
               mfaType: args['mfa_type'] as String? ?? 'email',
               email: args['email'] as String? ?? '',
             ),

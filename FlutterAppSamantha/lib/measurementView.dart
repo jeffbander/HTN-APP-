@@ -1,10 +1,12 @@
 // ignore: file_names
 
 import 'package:flutter/material.dart';
-import 'commonWidgets.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'msg.dart';
 import 'dart:developer' as dev; // For logging
+import 'navigationManager.dart';
 import 'theme/app_theme.dart';
 import 'widgets/gradient_header.dart';
 import 'widgets/app_card.dart';
@@ -214,32 +216,11 @@ class _StartMeasurementViewState extends State<StartMeasurementView> {
             isActive: true,
           ),
           const SizedBox(height: AppTheme.spacingLg),
-          // Quick tips card
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.lightbulb_outline, color: AppTheme.warning, size: 20),
-                    const SizedBox(width: AppTheme.spacingSm),
-                    Text(
-                      'Quick Tips',
-                      style: AppTheme.titleMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppTheme.spacingMd),
-                _buildTipRow('Avoid caffeine for 30 minutes before'),
-                _buildTipRow('Don\'t measure right after exercise'),
-                _buildTipRow('Empty your bladder before measuring'),
-                _buildTipRow('Take readings at the same time daily'),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacingMd),
+          // 7-Day Average card
+          if (widget.recentMeasurements.isNotEmpty)
+            _buildSevenDayAverageCard(),
+          if (widget.recentMeasurements.isNotEmpty)
+            const SizedBox(height: AppTheme.spacingMd),
           // Manual entry link
           TextButton(
             onPressed: () {
@@ -326,16 +307,126 @@ class _StartMeasurementViewState extends State<StartMeasurementView> {
     );
   }
 
-  Widget _buildTipRow(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppTheme.spacingSm),
-      child: Row(
+  Map<String, dynamic> get _sevenDayStats {
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+    final recent = widget.recentMeasurements.where((m) {
+      return m.keys.first.isAfter(sevenDaysAgo);
+    }).toList();
+
+    if (recent.isEmpty) return {};
+
+    int totalSys = 0, totalDia = 0;
+    for (final m in recent) {
+      final v = m.values.first;
+      totalSys += v[0];
+      totalDia += v[1];
+    }
+    final count = recent.length;
+    final avgSys = (totalSys / count).round();
+    final avgDia = (totalDia / count).round();
+
+    String category = 'Normal';
+    Color color = AppTheme.accentGreen;
+    if (avgSys >= 180 || avgDia >= 120) {
+      category = 'Crisis';
+      color = AppTheme.error;
+    } else if (avgSys >= 140 || avgDia >= 90) {
+      category = 'High';
+      color = AppTheme.error;
+    } else if (avgSys >= 130 || avgDia >= 80) {
+      category = 'Elevated';
+      color = AppTheme.warning;
+    }
+
+    return {
+      'avgSystolic': avgSys,
+      'avgDiastolic': avgDia,
+      'count': count,
+      'category': category,
+      'color': color,
+    };
+  }
+
+  Widget _buildSevenDayAverageCard() {
+    final stats = _sevenDayStats;
+    if (stats.isEmpty) return const SizedBox.shrink();
+
+    final avgSys = stats['avgSystolic'] as int;
+    final avgDia = stats['avgDiastolic'] as int;
+    final count = stats['count'] as int;
+    final category = stats['category'] as String;
+    final color = stats['color'] as Color;
+
+    return AppCard(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle, size: 16, color: AppTheme.accentGreen),
-          const SizedBox(width: AppTheme.spacingSm),
-          Expanded(
-            child: Text(text, style: AppTheme.bodyMedium),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '7-Day Average',
+                style: AppTheme.titleMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '$count reading${count == 1 ? '' : 's'}',
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppTheme.mediumGray,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingMd),
+          Row(
+            children: [
+              Text(
+                '$avgSys/$avgDia',
+                style: AppTheme.headlineLarge.copyWith(
+                  color: AppTheme.navyBlue,
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacingSm),
+              Text(
+                'mmHg',
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppTheme.mediumGray,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacingSm,
+                  vertical: AppTheme.spacingXs,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.spacingXs),
+                    Text(
+                      category,
+                      style: AppTheme.labelMedium.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -645,6 +736,7 @@ class _MeasurementViewState extends State<MeasurementView> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
+              _markStatusActive();
               _finishMeasurement();
             },
             child: const Text('Later'),
@@ -652,8 +744,8 @@ class _MeasurementViewState extends State<MeasurementView> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to lifestyle questionnaire
-              Navigator.of(context).pushReplacementNamed('/lifestyle');
+              _markStatusActive();
+              Navigator.of(context).pushNamed('/lifestyle');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentGreen,
@@ -663,6 +755,12 @@ class _MeasurementViewState extends State<MeasurementView> {
         ],
       ),
     );
+  }
+
+  void _markStatusActive() {
+    const storage = FlutterSecureStorage();
+    storage.write(key: 'user_status', value: 'active');
+    context.read<NavigationManager>().userStatus = 'active';
   }
 
   void _finishMeasurement() {

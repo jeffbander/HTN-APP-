@@ -73,16 +73,20 @@ class _MfaVerifyScreenState extends State<MfaVerifyScreen> {
         } catch (_) {
           // SharedPreferences may not be initialized yet; will sync on next launch
         }
+        // Sync measurements from backend for this user
+        await SourceManager.shared.syncMeasurementsFromBackend();
         // Route based on user_status
         if (mounted) {
           final targetRoute = StatusRouter.routeForStatus(userStatus);
-          if (targetRoute == '/measurement') {
+          final hasPairedDevice = SourceManager.shared.curDeviceID.isNotEmpty;
+          if (targetRoute == '/measurement' ||
+              (targetRoute == '/device-selection' && hasPairedDevice)) {
             final navManager = Provider.of<NavigationManager>(context, listen: false);
             navManager.userStatus = userStatus;
             navManager.showMeasurementView();
             Navigator.of(context).popUntil((route) => route.isFirst);
           } else {
-            Navigator.of(context).pushNamedAndRemoveUntil(targetRoute, (r) => false);
+            Navigator.of(context).pushReplacementNamed(targetRoute);
           }
         }
       } else if (result['status'] == 429) {
