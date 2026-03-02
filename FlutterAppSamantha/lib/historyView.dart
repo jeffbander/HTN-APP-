@@ -11,6 +11,7 @@ import 'theme/app_theme.dart';
 import 'widgets/gradient_header.dart';
 import 'widgets/app_card.dart';
 import 'widgets/primary_button.dart';
+import 'measurementView.dart' show showReadingDetailSheet, getBpColor;
 
 enum HistoryViewMode { graph, table }
 
@@ -703,18 +704,18 @@ class _HistoryViewState extends State<HistoryView> {
               final diastolic = values[1];
               final hr = values.length > 2 ? values[2] : 0;
               final note = _notesByDate[date.toIso8601String()];
+              final bpColor = getBpColor(systolic, diastolic);
 
-              // Determine BP category color
-              Color bpColor = AppTheme.accentGreen;
-              if (systolic >= 180 || diastolic >= 120) {
-                bpColor = AppTheme.error;
-              } else if (systolic >= 140 || diastolic >= 90) {
-                bpColor = AppTheme.error;
-              } else if (systolic >= 130 || diastolic >= 80) {
-                bpColor = AppTheme.warning;
-              }
-
-              return Container(
+              return GestureDetector(
+                onTap: () => showReadingDetailSheet(
+                  context,
+                  systolic: systolic,
+                  diastolic: diastolic,
+                  heartRate: hr,
+                  date: date,
+                  notes: note,
+                ),
+                child: Container(
                 padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMd),
                 decoration: BoxDecoration(
                   border: Border(
@@ -792,6 +793,7 @@ class _HistoryViewState extends State<HistoryView> {
                       ),
                   ],
                 ),
+              ),
               );
             }),
           ],

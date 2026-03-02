@@ -15,6 +15,218 @@ import 'widgets/primary_button.dart';
 import 'historyView.dart';
 
 //------------------------------------------------------
+// Shared BP classification helpers
+//------------------------------------------------------
+
+String classifyBpCategory(int systolic, int diastolic) {
+  if (systolic >= 180 || diastolic >= 120) return 'Crisis';
+  if (systolic >= 140 || diastolic >= 90) return 'High';
+  if (systolic >= 130 || diastolic >= 80) return 'Elevated';
+  return 'Normal';
+}
+
+Color getBpColor(int systolic, int diastolic) {
+  if (systolic >= 180 || diastolic >= 120) return AppTheme.error;
+  if (systolic >= 140 || diastolic >= 90) return AppTheme.error;
+  if (systolic >= 130 || diastolic >= 80) return AppTheme.warning;
+  return AppTheme.accentGreen;
+}
+
+String getBpAdvice(int systolic, int diastolic) {
+  if (systolic >= 180 || diastolic >= 120) {
+    return 'Your blood pressure is very high. Please contact your healthcare provider immediately.';
+  }
+  if (systolic >= 140 || diastolic >= 90) {
+    return 'Your blood pressure is elevated. Consider lifestyle changes and consult with your healthcare provider.';
+  }
+  if (systolic >= 130 || diastolic >= 80) {
+    return 'Your blood pressure is slightly elevated. Monitor regularly and maintain healthy habits.';
+  }
+  return 'Great job! Your blood pressure is in the normal range. Keep up the healthy lifestyle!';
+}
+
+//------------------------------------------------------
+// Reading detail bottom sheet
+//------------------------------------------------------
+
+void showReadingDetailSheet(
+  BuildContext context, {
+  required int systolic,
+  required int diastolic,
+  required int heartRate,
+  required DateTime date,
+  String? notes,
+}) {
+  final category = classifyBpCategory(systolic, diastolic);
+  final color = getBpColor(systolic, diastolic);
+  final advice = getBpAdvice(systolic, diastolic);
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (context, scrollController) {
+          return SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(AppTheme.spacingMd),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppTheme.spacingMd),
+                    decoration: BoxDecoration(
+                      color: AppTheme.lightGray,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                // Date
+                Text(
+                  DateFormat("MMMM d, yyyy 'at' h:mm a").format(date),
+                  style: AppTheme.bodyMedium.copyWith(color: AppTheme.mediumGray),
+                ),
+                const SizedBox(height: AppTheme.spacingLg),
+                // BP reading + category badge
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$systolic/$diastolic',
+                      style: AppTheme.headlineLarge.copyWith(
+                        color: AppTheme.navyBlue,
+                        fontSize: 48,
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.spacingSm),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        'mmHg',
+                        style: AppTheme.bodyMedium.copyWith(color: AppTheme.mediumGray),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacingMd,
+                        vertical: AppTheme.spacingSm,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: AppTheme.spacingSm),
+                          Text(
+                            category,
+                            style: AppTheme.labelLarge.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacingMd),
+                // Heart rate
+                if (heartRate > 0)
+                  Row(
+                    children: [
+                      Icon(Icons.favorite, color: AppTheme.error, size: 20),
+                      const SizedBox(width: AppTheme.spacingSm),
+                      Text(
+                        '$heartRate bpm',
+                        style: AppTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                if (heartRate > 0) const SizedBox(height: AppTheme.spacingLg),
+                // What This Means card
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            category == 'Normal' ? Icons.thumb_up : Icons.info_outline,
+                            color: color,
+                            size: 20,
+                          ),
+                          const SizedBox(width: AppTheme.spacingSm),
+                          Text(
+                            'What This Means',
+                            style: AppTheme.titleMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppTheme.spacingMd),
+                      Text(advice, style: AppTheme.bodyMedium),
+                    ],
+                  ),
+                ),
+                // Notes
+                if (notes != null && notes.isNotEmpty) ...[
+                  const SizedBox(height: AppTheme.spacingMd),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.note, color: AppTheme.navyBlue, size: 20),
+                            const SizedBox(width: AppTheme.spacingSm),
+                            Text(
+                              'Notes',
+                              style: AppTheme.titleMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppTheme.spacingSm),
+                        Text(notes, style: AppTheme.bodyMedium),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppTheme.spacingMd),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+//------------------------------------------------------
 // class StartMeasurementView
 // View to start the measurement with guided Bluetooth-first flow
 //------------------------------------------------------
@@ -326,25 +538,12 @@ class _StartMeasurementViewState extends State<StartMeasurementView> {
     final avgSys = (totalSys / count).round();
     final avgDia = (totalDia / count).round();
 
-    String category = 'Normal';
-    Color color = AppTheme.accentGreen;
-    if (avgSys >= 180 || avgDia >= 120) {
-      category = 'Crisis';
-      color = AppTheme.error;
-    } else if (avgSys >= 140 || avgDia >= 90) {
-      category = 'High';
-      color = AppTheme.error;
-    } else if (avgSys >= 130 || avgDia >= 80) {
-      category = 'Elevated';
-      color = AppTheme.warning;
-    }
-
     return {
       'avgSystolic': avgSys,
       'avgDiastolic': avgDia,
       'count': count,
-      'category': category,
-      'color': color,
+      'category': classifyBpCategory(avgSys, avgDia),
+      'color': getBpColor(avgSys, avgDia),
     };
   }
 
@@ -442,21 +641,17 @@ class _StartMeasurementViewState extends State<StartMeasurementView> {
     final diastolic = hasValidValues ? values[1] : 0;
     final heartRate = values.length >= 3 ? values[2] : 0;
 
-    // Determine BP category color
-    Color bpColor = AppTheme.accentGreen;
-    String bpCategory = 'Normal';
-    if (systolic >= 180 || diastolic >= 120) {
-      bpColor = AppTheme.error;
-      bpCategory = 'Crisis';
-    } else if (systolic >= 140 || diastolic >= 90) {
-      bpColor = AppTheme.error;
-      bpCategory = 'High';
-    } else if (systolic >= 130 || diastolic >= 80) {
-      bpColor = AppTheme.warning;
-      bpCategory = 'Elevated';
-    }
+    final bpColor = getBpColor(systolic, diastolic);
+    final bpCategory = classifyBpCategory(systolic, diastolic);
 
     return AppCard(
+      onTap: () => showReadingDetailSheet(
+        context,
+        systolic: systolic,
+        diastolic: diastolic,
+        heartRate: heartRate,
+        date: dateTime,
+      ),
       child: Row(
         children: [
           Container(
@@ -667,33 +862,9 @@ class _MeasurementViewState extends State<MeasurementView> {
     });
   }
 
-  // Determine BP category
-  String get bpCategory {
-    if (systolic >= 180 || diastolic >= 120) return 'Crisis';
-    if (systolic >= 140 || diastolic >= 90) return 'High';
-    if (systolic >= 130 || diastolic >= 80) return 'Elevated';
-    return 'Normal';
-  }
-
-  Color get bpColor {
-    if (systolic >= 180 || diastolic >= 120) return AppTheme.error;
-    if (systolic >= 140 || diastolic >= 90) return AppTheme.error;
-    if (systolic >= 130 || diastolic >= 80) return AppTheme.warning;
-    return AppTheme.accentGreen;
-  }
-
-  String get bpAdvice {
-    if (systolic >= 180 || diastolic >= 120) {
-      return 'Your blood pressure is very high. Please contact your healthcare provider immediately.';
-    }
-    if (systolic >= 140 || diastolic >= 90) {
-      return 'Your blood pressure is elevated. Consider lifestyle changes and consult with your healthcare provider.';
-    }
-    if (systolic >= 130 || diastolic >= 80) {
-      return 'Your blood pressure is slightly elevated. Monitor regularly and maintain healthy habits.';
-    }
-    return 'Great job! Your blood pressure is in the normal range. Keep up the healthy lifestyle!';
-  }
+  String get bpCategory => classifyBpCategory(systolic, diastolic);
+  Color get bpColor => getBpColor(systolic, diastolic);
+  String get bpAdvice => getBpAdvice(systolic, diastolic);
 
   Future<void> _saveNote() async {
     final note = _notesController.text.trim();
