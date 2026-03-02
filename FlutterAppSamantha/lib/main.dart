@@ -158,6 +158,7 @@ class MyApp extends StatelessWidget {
                 navManager.showMeasurementView();
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
+              isEditing: args?['isEditing'] ?? false,
             ),
           );
         }

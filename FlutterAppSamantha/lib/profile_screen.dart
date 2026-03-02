@@ -14,6 +14,7 @@ import 'msg.dart';
 import 'navigationManager.dart';
 import 'utils/status_router.dart';
 import 'services/sync_service.dart';
+import 'registration/models/registration_data.dart';
 
 class ProfileScreen extends StatefulWidget {
   final BaseMessenger? messenger;
@@ -54,6 +55,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Lifestyle questionnaire tracking
   bool _lifestyleIncomplete = false;
+
+  // Lifestyle data fields
+  int? _exerciseDaysPerWeek;
+  int? _exerciseMinutesPerSession;
+  String? _financialStress;
+  String? _stressLevel;
+  String? _loneliness;
+  int? _sleepQuality;
+  Map<String, String> _foodFrequency = {};
 
   // Controllers for editable fields
   final _phoneController = TextEditingController();
@@ -149,6 +159,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final lifestyleIncomplete = profile['exercise_days_per_week'] == null
           && profile['stress_level'] == null;
 
+      // Parse lifestyle data
+      final exerciseDays = profile['exercise_days_per_week'];
+      final exerciseMinutes = profile['exercise_minutes_per_session'];
+      final financialStress = profile['financial_stress'] as String?;
+      final stressLevelVal = profile['stress_level'] as String?;
+      final lonelinessVal = profile['loneliness'] as String?;
+      final sleepQualityVal = profile['sleep_quality'];
+      final foodFreqRaw = profile['food_frequency'];
+      final Map<String, String> foodFreq = {};
+      if (foodFreqRaw is Map) {
+        foodFreqRaw.forEach((key, value) {
+          foodFreq[key.toString()] = value?.toString() ?? '';
+        });
+      }
+
       setState(() {
         _name = profile['name'] ?? '';
         _email = profile['email'] ?? '';
@@ -169,6 +194,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _onBPMedication = onBPMedication;
         _chronicConditions = chronicConditions;
         _lifestyleIncomplete = lifestyleIncomplete;
+        // Lifestyle data
+        _exerciseDaysPerWeek = exerciseDays is int ? exerciseDays : null;
+        _exerciseMinutesPerSession = exerciseMinutes is int ? exerciseMinutes : null;
+        _financialStress = financialStress;
+        _stressLevel = stressLevelVal;
+        _loneliness = lonelinessVal;
+        _sleepQuality = sleepQualityVal is int ? sleepQualityVal : null;
+        _foodFrequency = foodFreq;
         _isLoading = false;
       });
     } catch (e) {
@@ -283,10 +316,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _openLifestyleQuestionnaire() {
+  // Reverse mappings: backend enum values → display labels
+  static String _displayFinancialStress(String? value) {
+    switch (value) {
+      case 'not_at_all': return 'Not hard at all';
+      case 'somewhat': return 'Somewhat hard';
+      case 'very': return 'Very hard';
+      case 'extremely': return 'Extremely hard';
+      default: return value ?? '-';
+    }
+  }
+
+  static String _displayStressLevel(String? value) {
+    switch (value) {
+      case 'low': return 'Not at all';
+      case 'moderate': return 'A little bit';
+      case 'high': return 'Somewhat';
+      case 'very_high': return 'Quite a bit';
+      default: return value ?? '-';
+    }
+  }
+
+  static String _displayLoneliness(String? value) {
+    switch (value) {
+      case 'never': return 'Never';
+      case 'rarely': return 'Rarely';
+      case 'sometimes': return 'Sometimes';
+      case 'often': return 'Often';
+      case 'always': return 'Always';
+      default: return value ?? '-';
+    }
+  }
+
+  void _openLifestyleQuestionnaire({bool isEditing = false}) {
+    RegistrationData data = RegistrationData();
+    if (isEditing) {
+      data.exerciseDaysPerWeek = _exerciseDaysPerWeek;
+      data.exerciseMinutesPerSession = _exerciseMinutesPerSession;
+      data.financialStress = _displayFinancialStress(_financialStress);
+      data.stressLevel = _displayStressLevel(_stressLevel);
+      data.loneliness = _displayLoneliness(_loneliness);
+      data.sleepQuality = _sleepQuality;
+      data.foodFrequency = Map<String, String>.from(_foodFrequency);
+    }
     Navigator.of(context).pushNamed(
       '/lifestyle',
       arguments: {
+        'data': data,
+        'isEditing': isEditing,
         'onComplete': () {
           Navigator.of(context).pop();
         },
@@ -571,7 +648,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ],
 
-                            // Lifestyle questionnaire banner
+                            // Lifestyle section
                             if (_lifestyleIncomplete) ...[
                               const SizedBox(height: AppTheme.spacingMd),
                               AppCard(
@@ -606,7 +683,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     const SizedBox(height: AppTheme.spacingMd),
                                     PrimaryButton(
                                       label: 'Complete Now',
-                                      onPressed: _openLifestyleQuestionnaire,
+                                      onPressed: () => _openLifestyleQuestionnaire(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else ...[
+                              const SizedBox(height: AppTheme.spacingMd),
+                              AppCard(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Lifestyle & Wellness',
+                                          style: AppTheme.titleMedium.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.edit,
+                                            size: 20,
+                                            color: AppTheme.accentGreen,
+                                          ),
+                                          onPressed: () => _openLifestyleQuestionnaire(isEditing: true),
+                                          tooltip: 'Edit lifestyle answers',
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: AppTheme.spacingMd),
+                                    _buildReadOnlyRow(
+                                      'Exercise',
+                                      '${_exerciseDaysPerWeek ?? '-'} days/week, ${_exerciseMinutesPerSession ?? '-'} min/session',
+                                    ),
+                                    const Divider(),
+                                    _buildReadOnlyRow(
+                                      'Financial Stress',
+                                      _displayFinancialStress(_financialStress),
+                                    ),
+                                    const Divider(),
+                                    _buildReadOnlyRow(
+                                      'Stress Level',
+                                      _displayStressLevel(_stressLevel),
+                                    ),
+                                    const Divider(),
+                                    _buildReadOnlyRow(
+                                      'Loneliness',
+                                      _displayLoneliness(_loneliness),
+                                    ),
+                                    const Divider(),
+                                    _buildReadOnlyRow(
+                                      'Sleep Quality',
+                                      _sleepQuality != null ? '$_sleepQuality/10' : '-',
                                     ),
                                   ],
                                 ),

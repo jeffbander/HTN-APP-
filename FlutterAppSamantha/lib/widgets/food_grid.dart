@@ -20,69 +20,61 @@ class FoodFrequencyGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header row
-        Row(
-          children: [
-            const Expanded(
-              flex: 3,
-              child: SizedBox(),
-            ),
-            ...frequencyOptions.map((option) => Expanded(
-              flex: 2,
-              child: Text(
-                option,
-                style: AppTheme.bodyMedium.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            )),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spacingSm),
-        const Divider(height: 1),
-        // Food rows
-        ...foodCategories.map((food) => _buildFoodRow(food)),
+        ...foodCategories.map((food) => _buildFoodItem(food)),
       ],
     );
   }
 
-  Widget _buildFoodRow(String food) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingSm),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Text(
-                  food,
-                  style: AppTheme.bodyMedium.copyWith(
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              ...frequencyOptions.map((option) => Expanded(
-                flex: 2,
-                child: Radio<String>(
-                  value: option,
-                  groupValue: selectedValues[food],
-                  onChanged: (value) {
-                    if (value != null) {
-                      onChanged(food, value);
-                    }
-                  },
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                ),
-              )),
-            ],
+  Widget _buildFoodItem(String food) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.spacingMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            food,
+            style: AppTheme.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        const Divider(height: 1),
-      ],
+          const SizedBox(height: AppTheme.spacingXs),
+          Wrap(
+            spacing: AppTheme.spacingSm,
+            runSpacing: AppTheme.spacingXs,
+            children: frequencyOptions.map((option) {
+              final isSelected = selectedValues[food] == option;
+              return GestureDetector(
+                onTap: () => onChanged(food, option),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Radio<String>(
+                      value: option,
+                      groupValue: selectedValues[food],
+                      onChanged: (value) {
+                        if (value != null) {
+                          onChanged(food, value);
+                        }
+                      },
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    Text(
+                      option,
+                      style: AppTheme.bodyMedium.copyWith(
+                        fontSize: 12,
+                        color: isSelected ? AppTheme.navyBlue : AppTheme.darkGray,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+          const Divider(height: 1),
+        ],
+      ),
     );
   }
 }

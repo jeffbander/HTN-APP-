@@ -12,11 +12,13 @@ import '../../flaskRegUsr.dart';
 class Step5Lifestyle extends StatefulWidget {
   final RegistrationData data;
   final VoidCallback onComplete;
+  final bool isEditing;
 
   const Step5Lifestyle({
     super.key,
     required this.data,
     required this.onComplete,
+    this.isEditing = false,
   });
 
   @override
@@ -31,7 +33,7 @@ class _Step5LifestyleState extends State<Step5Lifestyle> {
 
   String _mapFinancialStress(String? value) {
     switch (value) {
-      case 'Not at all hard':
+      case 'Not hard at all':
         return 'not_at_all';
       case 'Somewhat hard':
         return 'somewhat';
@@ -142,8 +144,8 @@ class _Step5LifestyleState extends State<Step5Lifestyle> {
       backgroundColor: AppTheme.offWhite,
       body: Column(
         children: [
-          const GradientHeader(
-            title: 'Complete Registration',
+          GradientHeader(
+            title: widget.isEditing ? 'Edit Lifestyle' : 'Complete Registration',
             subtitle: 'Lifestyle & Wellness',
           ),
           Expanded(
@@ -359,7 +361,7 @@ class _Step5LifestyleState extends State<Step5Lifestyle> {
             child: Padding(
               padding: const EdgeInsets.all(AppTheme.spacingMd),
               child: PrimaryButton(
-                label: 'Complete Registration',
+                label: widget.isEditing ? 'Save Changes' : 'Complete Registration',
                 onPressed: _submit,
                 isLoading: _isLoading,
               ),

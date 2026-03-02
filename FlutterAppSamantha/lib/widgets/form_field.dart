@@ -41,7 +41,6 @@ class AppTextField extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTheme.labelLarge,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (required)
@@ -103,7 +102,6 @@ class AppDropdown<T> extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTheme.labelLarge,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (required)
@@ -171,7 +169,6 @@ class AppRadioGroup<T> extends StatelessWidget {
                   child: Text(
                     label,
                     style: AppTheme.labelLarge,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (required)
@@ -267,7 +264,6 @@ class AppCheckboxGroup extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTheme.labelLarge,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (required)
@@ -338,7 +334,6 @@ class DateDropdowns extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTheme.labelLarge,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (required)
