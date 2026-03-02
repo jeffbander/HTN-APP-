@@ -8,7 +8,7 @@ class StatusRouter {
       case 'pending_approval':
         return '/pending-approval';
       case 'pending_registration':
-        return '/registration';
+        return '/device-selection';
       case 'pending_cuff':
         return '/device-selection';
       case 'pending_first_reading':
@@ -30,7 +30,7 @@ class StatusRouter {
       case 'pending_approval':
         return {'/pending-approval', '/login', '/logout'};
       case 'pending_registration':
-        return {'/registration', '/login', '/logout'};
+        return {'/device-selection', '/cuff-request-pending', '/login', '/logout'};
       case 'pending_cuff':
         return {'/device-selection', '/cuff-request-pending', '/pairing', '/login', '/logout'};
       case 'pending_first_reading':

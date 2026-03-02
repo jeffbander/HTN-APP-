@@ -1,12 +1,15 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/app_card.dart';
 import '../widgets/primary_button.dart';
 import '../flaskRegUsr.dart';
+import '../navigationManager.dart';
 import '../services/dev_mode_service.dart';
 import '../utils/status_router.dart';
 
@@ -51,25 +54,30 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
 
     try {
       final token = await _storage.read(key: 'auth_token');
+      dev.log('PendingApproval: polling, token=${token != null ? "present" : "null"}');
       if (token == null) return;
 
       final profile = await _api.getProfile(token);
+      dev.log('PendingApproval: profile response=$profile');
       if (profile != null && mounted) {
         final userStatus = profile['user_status'] as String? ?? 'pending_approval';
+        dev.log('PendingApproval: user_status=$userStatus');
         if (userStatus != 'pending_approval') {
           setState(() {
             _isApproved = true;
           });
           _pollTimer?.cancel();
+          await _storage.write(key: 'user_status', value: userStatus);
           await Future.delayed(const Duration(milliseconds: 500));
           if (mounted) {
-            final route = StatusRouter.routeForStatus(userStatus);
-            Navigator.of(context).pushReplacementNamed(route);
+            final navManager = Provider.of<NavigationManager>(context, listen: false);
+            navManager.userStatus = userStatus;
+            await navManager.navigate(ViewType.deviceSelection);
           }
         }
       }
-    } catch (e) {
-      // Silent failure - will retry on next poll
+    } catch (e, stack) {
+      dev.log('PendingApproval: poll error: $e\n$stack');
     } finally {
       if (mounted) {
         setState(() {
@@ -298,7 +306,8 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                   label: 'Continue (Skip for Testing)',
                   variant: ButtonVariant.navy,
                   onPressed: () {
-                    Navigator.of(context).pushReplacementNamed('/device-selection');
+                    final navManager = Provider.of<NavigationManager>(context, listen: false);
+                    navManager.navigate(ViewType.deviceSelection);
                   },
                 ),
               ),

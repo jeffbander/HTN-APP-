@@ -132,8 +132,9 @@ class NavigationManager extends ChangeNotifier {
       case 'enrollment_only':
         _currentViewW = const PendingApprovalScreen();
         break;
+      case 'pending_registration':
       case 'pending_cuff':
-        _currentViewW = const CuffRequestPendingScreen();
+        _currentViewW = const DeviceSelectionScreen();
         break;
       case 'deactivated':
         _currentViewW = const DeactivatedScreen();
@@ -340,10 +341,13 @@ class NavigationManager extends ChangeNotifier {
             if (route == '/measurement' ||
                 (route == '/device-selection' && hasPairedDevice)) {
               if (sourceManager.needsDeviceInfo()) {
-                await navigate(ViewType.registerDevice);
+                await navigate(ViewType.deviceSelection);
               } else {
                 await navigate(ViewType.startMeasurement);
               }
+            } else if (route == '/device-selection') {
+              // pending_registration or pending_cuff without paired device
+              await navigate(ViewType.deviceSelection);
             } else {
               // Show the status-appropriate screen directly
               _showStatusScreen(userStatus);
@@ -356,7 +360,7 @@ class NavigationManager extends ChangeNotifier {
             if (sourceManager.needsUserInfo()) {
               await navigate(ViewType.loginView);
             } else if (sourceManager.needsDeviceInfo()) {
-              await navigate(ViewType.registerDevice);
+              await navigate(ViewType.deviceSelection);
             } else {
               await navigate(ViewType.startMeasurement);
             }
@@ -371,7 +375,7 @@ class NavigationManager extends ChangeNotifier {
           if (sourceManager.needsUserInfo()) {
             await navigate(ViewType.registerUser);
           } else if (sourceManager.needsDeviceInfo()) {
-            await navigate(ViewType.registerDevice);
+            await navigate(ViewType.deviceSelection);
           }
         }
         break;
