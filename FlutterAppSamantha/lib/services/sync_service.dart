@@ -110,6 +110,7 @@ class SyncService extends ChangeNotifier {
     required DateTime readingDate,
     required String deviceId,
     required String userEmail,
+    String? notes,
   }) async {
     if (kIsWeb) {
       dev.log('SyncService: Cannot queue readings on web');
@@ -122,6 +123,7 @@ class SyncService extends ChangeNotifier {
       readingDate: readingDate,
       deviceId: deviceId,
       userEmail: userEmail,
+      notes: notes,
     );
 
     await _updateCounts();
@@ -228,6 +230,7 @@ class SyncService extends ChangeNotifier {
         "diastolic": reading.diastolic,
         "heartRate": reading.heartRate,
         "readingDate": reading.readingDate.toIso8601String(),
+        if (reading.notes != null) "notes": reading.notes,
       });
 
       final uri = Uri.parse("$baseUrl/consumer/readings");

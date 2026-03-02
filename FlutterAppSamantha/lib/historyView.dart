@@ -26,6 +26,7 @@ class HistoryView extends StatefulWidget {
 class _HistoryViewState extends State<HistoryView> {
   HistoryViewMode _viewMode = HistoryViewMode.graph;
   List<Map<DateTime, List<int>>> _measurements = [];
+  Map<String, String> _notesByDate = {};
   bool _isLoading = true;
   int _selectedDays = 7; // Date range selector: 7, 30, or all
 
@@ -45,6 +46,7 @@ class _HistoryViewState extends State<HistoryView> {
     }
 
     final List<Map<DateTime, List<int>>> loaded = [];
+    final Map<String, String> notesMap = {};
 
     for (final jsonStr in stored) {
       try {
@@ -52,6 +54,9 @@ class _HistoryViewState extends State<HistoryView> {
         final date = DateTime.parse(map['date']);
         final values = List<int>.from(map['values']);
         loaded.add({date: values});
+        if (map['notes'] != null && (map['notes'] as String).isNotEmpty) {
+          notesMap[date.toIso8601String()] = map['notes'];
+        }
       } catch (e) {
         dev.log('Error parsing measurement: $e');
       }
@@ -63,6 +68,7 @@ class _HistoryViewState extends State<HistoryView> {
     if (mounted) {
       setState(() {
         _measurements = loaded;
+        _notesByDate = notesMap;
         _isLoading = false;
       });
     }
@@ -89,6 +95,7 @@ class _HistoryViewState extends State<HistoryView> {
             r['diastolic'],
             r['heart_rate'] ?? 0,
           ],
+          if (r['notes'] != null) 'notes': r['notes'],
         });
         localEntries.add(entry);
       }
@@ -114,6 +121,7 @@ class _HistoryViewState extends State<HistoryView> {
     final systolicController = TextEditingController();
     final diastolicController = TextEditingController();
     final hrController = TextEditingController();
+    final notesController = TextEditingController();
     DateTime selectedDate = DateTime.now();
 
     showDialog(
@@ -243,6 +251,21 @@ class _HistoryViewState extends State<HistoryView> {
                     ),
                   ),
                 ),
+                const SizedBox(height: AppTheme.spacingMd),
+                // Notes
+                Text('Notes (optional)', style: AppTheme.labelLarge),
+                const SizedBox(height: AppTheme.spacingSm),
+                TextField(
+                  controller: notesController,
+                  maxLines: 2,
+                  maxLength: 500,
+                  decoration: InputDecoration(
+                    hintText: 'e.g., forgot meds, just exercised',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -281,10 +304,12 @@ class _HistoryViewState extends State<HistoryView> {
                 final prefs = await SharedPreferences.getInstance();
                 final stored = prefs.getStringList('measurements') ?? [];
 
+                final noteText = notesController.text.trim();
                 final newReading = jsonEncode({
                   'date': selectedDate.toIso8601String(),
                   'values': [systolic, diastolic, hr],
                   'manual': true,
+                  if (noteText.isNotEmpty) 'notes': noteText,
                 });
 
                 stored.add(newReading);
@@ -677,6 +702,7 @@ class _HistoryViewState extends State<HistoryView> {
               final systolic = values[0];
               final diastolic = values[1];
               final hr = values.length > 2 ? values[2] : 0;
+              final note = _notesByDate[date.toIso8601String()];
 
               // Determine BP category color
               Color bpColor = AppTheme.accentGreen;
@@ -695,51 +721,75 @@ class _HistoryViewState extends State<HistoryView> {
                     bottom: BorderSide(color: AppTheme.lightGray.withOpacity(0.5)),
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            DateFormat('MMM d, yyyy').format(date),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                DateFormat('MMM d, yyyy').format(date),
+                                style: AppTheme.bodyMedium,
+                              ),
+                              Text(
+                                DateFormat('h:mm a').format(date),
+                                style: AppTheme.labelMedium.copyWith(color: AppTheme.mediumGray),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppTheme.spacingSm,
+                              vertical: AppTheme.spacingXs,
+                            ),
+                            decoration: BoxDecoration(
+                              color: bpColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            ),
+                            child: Text(
+                              '$systolic/$diastolic',
+                              style: AppTheme.bodyLarge.copyWith(
+                                color: bpColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            hr > 0 ? '$hr' : '-',
                             style: AppTheme.bodyMedium,
+                            textAlign: TextAlign.center,
                           ),
-                          Text(
-                            DateFormat('h:mm a').format(date),
-                            style: AppTheme.labelMedium.copyWith(color: AppTheme.mediumGray),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacingSm,
-                          vertical: AppTheme.spacingXs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: bpColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                        ),
-                        child: Text(
-                          '$systolic/$diastolic',
-                          style: AppTheme.bodyLarge.copyWith(
-                            color: bpColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          textAlign: TextAlign.center,
+                    if (note != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTheme.spacingSm),
+                        child: Row(
+                          children: [
+                            Icon(Icons.note, size: 14, color: AppTheme.mediumGray),
+                            const SizedBox(width: AppTheme.spacingXs),
+                            Expanded(
+                              child: Text(
+                                note,
+                                style: AppTheme.bodyMedium.copyWith(
+                                  color: AppTheme.mediumGray,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        hr > 0 ? '$hr' : '-',
-                        style: AppTheme.bodyMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
                   ],
                 ),
               );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'msg.dart';
 import 'dart:developer' as dev; // For logging
 import 'navigationManager.dart';
@@ -631,6 +632,7 @@ class _MeasurementViewState extends State<MeasurementView> {
   DateTime curTimestamp = DateTime.now();
   bool showSyncStatus = true;
   bool syncComplete = false;
+  final TextEditingController _notesController = TextEditingController();
 
   String formattedMessage =
       "Sending measurement back to Mt. Sinai.\nThis may take a moment...";
@@ -693,7 +695,17 @@ class _MeasurementViewState extends State<MeasurementView> {
     return 'Great job! Your blood pressure is in the normal range. Keep up the healthy lifestyle!';
   }
 
-  void _handleDone() {
+  Future<void> _saveNote() async {
+    final note = _notesController.text.trim();
+    if (note.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'reading_note_${curTimestamp.toIso8601String()}';
+    await prefs.setString(key, note);
+    dev.log('Saved reading note with key: $key');
+  }
+
+  void _handleDone() async {
+    await _saveNote();
     // Check if this is first reading and should prompt for lifestyle questionnaire
     if (widget.isFirstReading) {
       _showLifestylePrompt();
@@ -986,6 +998,46 @@ class _MeasurementViewState extends State<MeasurementView> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: AppTheme.spacingMd),
+                  // Notes Card
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.note_add,
+                              color: AppTheme.navyBlue,
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppTheme.spacingSm),
+                            Text(
+                              'Add a Note',
+                              style: AppTheme.titleMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppTheme.spacingMd),
+                        TextField(
+                          controller: _notesController,
+                          maxLines: 3,
+                          maxLength: 500,
+                          decoration: InputDecoration(
+                            hintText: 'e.g., forgot meds, just exercised',
+                            hintStyle: AppTheme.bodyMedium.copyWith(
+                              color: AppTheme.mediumGray,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1004,6 +1056,12 @@ class _MeasurementViewState extends State<MeasurementView> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
   }
 
   void handleMsgStatus(Msg msg) {

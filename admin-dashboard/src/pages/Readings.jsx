@@ -245,6 +245,7 @@ export default function Readings() {
                   <th className={styles.sortableHeader} onClick={() => handleSort('reading_date')}>
                     Reading Date{sortArrow('reading_date')}
                   </th>
+                  <th>Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -267,12 +268,15 @@ export default function Readings() {
                       <td>{r.heart_rate || '\u2014'}</td>
                       <td><BpCategoryBadge systolic={r.systolic} diastolic={r.diastolic} /></td>
                       <td>{formatDate(r.reading_date)}</td>
+                      <td title={r.notes || ''} style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13, color: '#666' }}>
+                        {r.notes || '\u2014'}
+                      </td>
                     </tr>
                   )
                 })}
                 {readings.length === 0 && (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', color: '#999', padding: 32 }}>
+                    <td colSpan={8} style={{ textAlign: 'center', color: '#999', padding: 32 }}>
                       No readings found
                     </td>
                   </tr>

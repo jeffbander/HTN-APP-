@@ -407,6 +407,7 @@ export default function PatientDetail() {
                 <th>Diastolic</th>
                 <th>HR</th>
                 <th>Category</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -419,11 +420,14 @@ export default function PatientDetail() {
                     <td style={{ color: cat.color, fontWeight: 600 }}>{r.diastolic}</td>
                     <td>{r.heart_rate || '\u2014'}</td>
                     <td><BpCategoryBadge systolic={r.systolic} diastolic={r.diastolic} /></td>
+                    <td title={r.notes || ''} style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13, color: '#666' }}>
+                      {r.notes || '\u2014'}
+                    </td>
                   </tr>
                 )
               })}
               {readings.length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', color: '#999', padding: 24 }}>No readings</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: '#999', padding: 24 }}>No readings</td></tr>
               )}
             </tbody>
           </table>

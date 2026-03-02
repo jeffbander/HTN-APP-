@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as dev;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'env.dart';
@@ -59,6 +60,11 @@ class FlaskUploader {
         final diastolic = int.tryParse(values[1].toString()) ?? 0;
         final heartRate = int.tryParse(values[2].toString()) ?? 0;
 
+        // Check for a patient note saved from the measurement results screen
+        final prefs = await SharedPreferences.getInstance();
+        final noteKey = 'reading_note_${date.toIso8601String()}';
+        final notes = prefs.getString(noteKey);
+
         // Try to send directly first
         final success = await _trySendReading(
           client: client,
@@ -67,6 +73,7 @@ class FlaskUploader {
           diastolic: diastolic,
           heartRate: heartRate,
           readingDate: date,
+          notes: notes,
         );
 
         // If direct send failed, queue for later
@@ -79,7 +86,13 @@ class FlaskUploader {
             readingDate: date,
             deviceId: deviceId,
             userEmail: email,
+            notes: notes,
           );
+        }
+
+        // Clean up the note from SharedPreferences after processing
+        if (notes != null) {
+          await prefs.remove(noteKey);
         }
       }
 
@@ -101,6 +114,7 @@ class FlaskUploader {
     required int diastolic,
     required int heartRate,
     required DateTime readingDate,
+    String? notes,
   }) async {
     try {
       // ---- Step 1: Get auth token from secure storage ----
@@ -117,6 +131,7 @@ class FlaskUploader {
         "diastolic": diastolic,
         "heartRate": heartRate,
         "readingDate": readingDate.toIso8601String(),
+        if (notes != null) "notes": notes,
       };
       dev.log("Reading Request: $readingPayload");
 

@@ -16,6 +16,7 @@ class QueuedReading {
   final DateTime queuedAt;
   final int retryCount;
   final String? lastError;
+  final String? notes;
 
   QueuedReading({
     this.id,
@@ -28,6 +29,7 @@ class QueuedReading {
     required this.queuedAt,
     this.retryCount = 0,
     this.lastError,
+    this.notes,
   });
 
   Map<String, dynamic> toMap() {
@@ -42,6 +44,7 @@ class QueuedReading {
       'queued_at': queuedAt.toIso8601String(),
       'retry_count': retryCount,
       'last_error': lastError,
+      'notes': notes,
     };
   }
 
@@ -57,6 +60,7 @@ class QueuedReading {
       queuedAt: DateTime.parse(map['queued_at'] as String),
       retryCount: map['retry_count'] as int? ?? 0,
       lastError: map['last_error'] as String?,
+      notes: map['notes'] as String?,
     );
   }
 
@@ -71,6 +75,7 @@ class QueuedReading {
     DateTime? queuedAt,
     int? retryCount,
     String? lastError,
+    String? notes,
   }) {
     return QueuedReading(
       id: id ?? this.id,
@@ -83,6 +88,7 @@ class QueuedReading {
       queuedAt: queuedAt ?? this.queuedAt,
       retryCount: retryCount ?? this.retryCount,
       lastError: lastError ?? this.lastError,
+      notes: notes ?? this.notes,
     );
   }
 }
@@ -91,7 +97,7 @@ class QueuedReading {
 class OfflineQueueService {
   static const String _dbName = 'offline_queue.db';
   static const String _tableName = 'queued_readings';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
   static const int _maxRetries = 5;
 
   Database? _database;
@@ -120,6 +126,7 @@ class OfflineQueueService {
       path,
       version: _dbVersion,
       onCreate: _createDb,
+      onUpgrade: _upgradeDb,
     );
   }
 
@@ -135,7 +142,8 @@ class OfflineQueueService {
         user_email TEXT NOT NULL,
         queued_at TEXT NOT NULL,
         retry_count INTEGER DEFAULT 0,
-        last_error TEXT
+        last_error TEXT,
+        notes TEXT
       )
     ''');
 
@@ -150,6 +158,13 @@ class OfflineQueueService {
     dev.log('Offline queue database tables created');
   }
 
+  Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE $_tableName ADD COLUMN notes TEXT');
+      dev.log('Upgraded offline queue database to version 2 (added notes column)');
+    }
+  }
+
   /// Add a reading to the offline queue
   Future<int> queueReading({
     required int systolic,
@@ -158,6 +173,7 @@ class OfflineQueueService {
     required DateTime readingDate,
     required String deviceId,
     required String userEmail,
+    String? notes,
   }) async {
     final db = await database;
 
@@ -169,6 +185,7 @@ class OfflineQueueService {
       deviceId: deviceId,
       userEmail: userEmail,
       queuedAt: DateTime.now(),
+      notes: notes,
     );
 
     final id = await db.insert(_tableName, reading.toMap());

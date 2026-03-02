@@ -484,6 +484,7 @@ def create_reading():
     systolic = int(data['systolic'])
     diastolic = int(data['diastolic'])
     heart_rate = int(data['heartRate']) if data.get('heartRate') is not None else None
+    notes = (data.get('notes', '') or '').strip()[:500] or None
 
     # Deduplicate: reject if identical reading exists within 60 seconds
     window = timedelta(seconds=60)
@@ -502,7 +503,8 @@ def create_reading():
         systolic=systolic,
         diastolic=diastolic,
         heart_rate=heart_rate,
-        reading_date=reading_date
+        reading_date=reading_date,
+        notes=notes,
     )
 
     db.session.add(reading)
