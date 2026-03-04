@@ -460,6 +460,14 @@ class MeasurementManager
   final List<Map<DateTime, List<int>>> syncMeasurements = [];
   BluetoothConnectionState             prevState        = BluetoothConnectionState.disconnected;
 
+  // Silence detection: when no new data arrives for this duration after
+  // receiving at least one reading, we treat the transfer as complete.
+  // This lets the user see results faster instead of waiting for the
+  // cuff to fully disconnect.
+  static const Duration _silenceTimeout = Duration(seconds: 4);
+  Timer? _silenceTimer;
+  bool _transferCompleteSent = false;
+
   List<Map<DateTime, List<int>>> get measurements => List.unmodifiable(syncMeasurements);
 
   MeasurementManager({required this.messenger});
@@ -467,6 +475,10 @@ class MeasurementManager
   Future<void> connectToDevice (BluetoothDevice device) async
   {
       dev.log('Starting connection attempts for device...');
+
+      // Reset silence detection state for this new connection
+      _silenceTimer?.cancel();
+      _transferCompleteSent = false;
 
       // Monitor the connection state
       device.connectionState.listen ((state)
@@ -493,17 +505,21 @@ class MeasurementManager
       // Scan briefly to refresh the BLE cache before attempting connection.
       // Without this, connecting to a device that was off may fail with a
       // stale cache even though the device is now advertising.
+      // 2 seconds is sufficient to refresh the cache without making the user wait.
       try {
-        dev.log('Starting 5-second BLE scan to refresh cache before connect...');
-        await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
-        await Future.delayed(const Duration(seconds: 5));
+        dev.log('Starting 2-second BLE scan to refresh cache before connect...');
+        await FlutterBluePlus.startScan(timeout: const Duration(seconds: 2));
+        await Future.delayed(const Duration(seconds: 2));
         await FlutterBluePlus.stopScan();
         dev.log('Pre-connect scan complete');
       } catch (e) {
         dev.log('Pre-connect scan error (non-fatal): $e');
       }
 
-      const int maxRetries = 15; // ~30 seconds total (15 attempts * 2 second delay)
+      // Retry with exponential backoff: 1s, 2s, 4s, 8s delays between attempts.
+      // Worst case ~17 seconds total (vs. old approach of ~30 seconds).
+      // Most connections succeed on attempt 1 or 2.
+      const int maxRetries = 5;
       int retryCount = 0;
 
       while (retryCount < maxRetries)
@@ -513,7 +529,7 @@ class MeasurementManager
               if (!device.isConnected)
               {
                   dev.log('Attempting to connect (attempt ${retryCount + 1}/$maxRetries)');
-                  await device.connect(); // Attempt to connect
+                  await device.connect(timeout: const Duration(seconds: 10));
                   dev.log('Successfully connected to device');
 
                   // Perform service discovery once connected
@@ -536,8 +552,10 @@ class MeasurementManager
               retryCount++;
               dev.log('Failed to connect to device: $e', level: 1000);
               if (retryCount < maxRetries) {
-                  dev.log('Retrying connection in 2 seconds... (attempt $retryCount/$maxRetries)');
-                  await Future.delayed(const Duration(seconds: 2)); // Wait before retrying
+                  // Exponential backoff: 1s, 2s, 4s, 8s
+                  final delaySeconds = 1 << (retryCount - 1); // 2^(retryCount-1)
+                  dev.log('Retrying connection in ${delaySeconds}s... (attempt $retryCount/$maxRetries)');
+                  await Future.delayed(Duration(seconds: delaySeconds));
               }
           }
       }
@@ -553,10 +571,21 @@ class MeasurementManager
       ));
   }
 
-  // Send a message when the device is disconnected
-  Future<void> sendDisconnectionMsg (BluetoothDevice device) async
+  // Send a message when the device is disconnected or when silence is detected.
+  // Prevents duplicate sends — only the first call (whether from silence detection
+  // or actual disconnect) will fire the message.
+  Future<void> sendDisconnectionMsg (BluetoothDevice? device) async
   {
-      dev.log('Sending disconnection message for device');
+      if (_transferCompleteSent && device != null) {
+          // Silence detection already triggered the upload — skip the
+          // duplicate message from the actual Bluetooth disconnect event.
+          dev.log('Disconnect event ignored — transfer already completed via silence detection');
+          return;
+      }
+      _transferCompleteSent = true;
+      _silenceTimer?.cancel();
+
+      dev.log('Sending disconnection message (readings: ${syncMeasurements.length})');
       await messenger.sendMsg (msglib.Msg (deviceType: msglib.DeviceType.Phone,
                                             taskType:  msglib.TaskType.DisconnectPeripheralFor,
                                             status:    msglib.Status.succeeded,
@@ -602,9 +631,10 @@ class MeasurementManager
       await Future.delayed(const Duration(seconds: 1));
       await requestStoredRecords(racpCharacteristic);
     } else if (bpCharacteristic != null) {
-      // Fallback: some devices send data automatically when indications are enabled
-      dev.log('No RACP characteristic found — waiting for automatic data transfer');
-      await Future.delayed(const Duration(seconds: 5));
+      // Fallback: some devices send data automatically when indications are enabled.
+      // No need to wait here — the silence detection timer will handle knowing
+      // when the transfer is complete. The app is already listening for data.
+      dev.log('No RACP characteristic found — listening for automatic data transfer');
     }
   }
 
@@ -664,6 +694,13 @@ class MeasurementManager
 
       dev.log('Received data from ${characteristic.uuid}: $data');
 
+      // Skip RACP response packets (they start with opcodes 0x05 or 0x06
+      // and are status/count responses, not BP measurements)
+      if (characteristic.uuid == BluetoothManager.racpCharacteristicUUID) {
+          dev.log('RACP response received (not a BP measurement), skipping parse');
+          return;
+      }
+
       try
       {
           Map<DateTime, List<int>> parsedData = await parser.parseBloodPressureDataWithTimestamp (data);
@@ -672,12 +709,33 @@ class MeasurementManager
           {
               syncMeasurements.add (parsedData);
               dev.log('Parsed data added: $parsedData');
+
+              // Start or restart the silence timer. Each time new data arrives,
+              // we reset the countdown. When data stops flowing for 4 seconds,
+              // we know the cuff is done sending and can show results immediately.
+              _restartSilenceTimer();
           }
       }
       catch (e)
       {
           dev.log('Error parsing data from ${characteristic.uuid}: $e', level: 1000);
       }
+  }
+
+  /// Restarts the silence detection timer. When no new data arrives for
+  /// [_silenceTimeout] after the last reading, we send a disconnection
+  /// message so the app shows results without waiting for the cuff to
+  /// physically disconnect.
+  void _restartSilenceTimer() {
+      _silenceTimer?.cancel();
+      _silenceTimer = Timer(_silenceTimeout, () {
+          if (!_transferCompleteSent && syncMeasurements.isNotEmpty) {
+              _transferCompleteSent = true;
+              dev.log('Silence detected (${_silenceTimeout.inSeconds}s with no new data) '
+                  '— treating transfer as complete with ${syncMeasurements.length} reading(s)');
+              sendDisconnectionMsg(null);
+          }
+      });
   }
 
   Future<void> sendMeasurements () async
@@ -702,6 +760,7 @@ class MeasurementManager
 
   void dispose()
   {
+      _silenceTimer?.cancel();
       dev.log('Disposing MeasurementManager.');
   }
 }
