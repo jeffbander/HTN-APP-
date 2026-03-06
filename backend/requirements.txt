@@ -15,7 +15,7 @@ pyotp==2.9.0
 python-dotenv==1.0.0
 
 # HIPAA Audit Logging
-structlog==24.1.0
+structlog==25.5.0
 
 # SSL/TLS
 pyOpenSSL==25.3.0
